@@ -1,0 +1,7 @@
+
+---
+
+- hosts: nas
+  become: yes
+  roles:
+    - { role: nas }

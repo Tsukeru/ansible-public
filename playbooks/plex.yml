@@ -1,0 +1,13 @@
+---
+- hosts: nvidia
+  gather_facts: yes
+  become: yes
+  roles:
+    - { role: nvidia }
+
+- hosts: pms
+  gather_facts: yes
+  become: yes
+  roles:
+    - { role: caddy }
+    - { role: plex }

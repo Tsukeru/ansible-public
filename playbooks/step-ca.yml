@@ -1,0 +1,6 @@
+---
+
+- hosts: step-ca
+  become: yes
+  roles:
+    - { role: step-ca }

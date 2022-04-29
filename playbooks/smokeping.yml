@@ -1,0 +1,7 @@
+---
+
+- hosts: smokeping
+  become: yes
+  roles:
+    - { role: smokeping }
+

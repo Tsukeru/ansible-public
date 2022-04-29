@@ -1,0 +1,13 @@
+---
+
+- hosts: bind
+  become: yes
+  roles:
+    - { role: bind }
+
+- hosts: bind
+  become: yes
+  serial: 1
+  tasks:
+    - name: Restart Bind
+      service: name=named state=restarted

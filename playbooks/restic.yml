@@ -1,0 +1,6 @@
+---
+
+- hosts: restic
+  become: yes
+  roles:
+    - { role: restic }

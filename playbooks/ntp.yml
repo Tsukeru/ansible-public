@@ -1,0 +1,6 @@
+---
+
+- hosts: ntp
+  become: yes
+  roles:
+    - { role: ntp }

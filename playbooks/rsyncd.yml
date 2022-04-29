@@ -1,0 +1,6 @@
+---
+
+- hosts: all:!appliance
+  become: yes
+  roles:
+    - { role: rsyncd }

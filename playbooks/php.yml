@@ -1,0 +1,7 @@
+---
+
+- hosts: php
+  become: yes
+  roles:
+    - { role: php }
+    - { role: caddy }

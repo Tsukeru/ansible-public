@@ -1,0 +1,12 @@
+---
+
+- hosts: powerdns
+  become: yes
+  roles:
+    - { role: mariadb }
+    - { role: powerdns }
+
+- hosts: powerdns-admin
+  become: yes
+  roles:
+    - { role: powerdns-admin }

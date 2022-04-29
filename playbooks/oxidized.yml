@@ -1,0 +1,7 @@
+---
+
+- hosts: oxidized
+  become: yes
+  roles:
+    - { role: caddy }
+    - { role: oxidized }

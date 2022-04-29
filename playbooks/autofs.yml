@@ -1,0 +1,6 @@
+---
+
+- hosts: autofs
+  become: yes
+  roles:
+    - { role: autofs }

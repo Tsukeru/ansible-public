@@ -1,0 +1,6 @@
+---
+
+- hosts: gitlab-runner
+  become: yes
+  roles:
+    - { role: gitlab-runner }

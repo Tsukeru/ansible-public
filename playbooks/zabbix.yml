@@ -1,0 +1,19 @@
+---
+- hosts: zabbix-server
+  become: yes
+  roles:
+    - { role: php }
+    - { role: caddy }
+    - { role: zabbix-server }
+
+- hosts: all:!appliance
+  become: yes
+  roles:
+    - { role: zabbix }
+
+- hosts: zabbix-proxy
+  become: yes
+  roles:
+    - { role: mariadb }
+    - { role: zabbix-proxy }
+

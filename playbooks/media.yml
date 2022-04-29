@@ -1,0 +1,51 @@
+---
+
+- hosts: jackett,sonarr,radarr,ombi,prowlarr,flaresolverr,tautulli,calibre-web,komga
+  become: yes
+  roles:
+    - { role: caddy }
+
+- hosts: flaresolverr
+  become: yes
+  roles:
+    - { role: flaresolverr }
+
+- hosts: jackett
+  become: yes
+  roles:
+    - { role: jackett }
+
+- hosts: sonarr
+  become: yes
+  roles:
+    - { role: sonarr }
+
+- hosts: radarr
+  become: yes
+  roles:
+    - { role: radarr }
+
+- hosts: ombi
+  become: yes
+  roles:
+    - { role: ombi }
+
+- hosts: tautulli
+  become: yes
+  roles:
+    - { role: tautulli }
+
+- hosts: prowlarr
+  become: yes
+  roles:
+    - { role: prowlarr }
+
+- hosts: calibre-web
+  become: yes
+  roles:
+    - { role: calibre-web }
+
+- hosts: komga
+  become: yes
+  roles:
+    - { role: komga }

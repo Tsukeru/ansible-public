@@ -1,0 +1,6 @@
+---
+
+- hosts: mariadb
+  become: yes
+  roles:
+    - { role: mariadb }

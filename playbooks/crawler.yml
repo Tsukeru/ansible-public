@@ -1,0 +1,6 @@
+---
+
+- hosts: crawler
+  become: yes
+  roles:
+    - { role: crawler }

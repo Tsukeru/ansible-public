@@ -1,0 +1,6 @@
+---
+
+- hosts: hyperglass
+  become: yes
+  roles:
+    - { role: hyperglass }

@@ -1,0 +1,6 @@
+---
+
+- hosts: bgpalerter
+  become: yes
+  roles:
+    - { role: bgpalerter }

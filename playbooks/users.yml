@@ -1,0 +1,7 @@
+---
+
+- hosts: all:!firewall
+  become: yes
+  roles:
+    - { role: users }
+

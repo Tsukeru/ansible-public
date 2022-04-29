@@ -1,0 +1,6 @@
+---
+
+- hosts: grafana
+  become: yes
+  roles:
+    - { role: grafana }

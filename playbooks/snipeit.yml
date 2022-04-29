@@ -1,0 +1,9 @@
+---
+
+- hosts: snipeit
+  become: yes
+  roles:
+    - { role: caddy }
+    - { role: php }
+    - { role: snipeit }
+    

@@ -1,0 +1,6 @@
+---
+
+- hosts: mdns-relay
+  become: yes
+  roles:
+    - { role: mdns-relay }

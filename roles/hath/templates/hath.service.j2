@@ -1,0 +1,13 @@
+[Unit]
+Description=Hentai@Home
+After=local-fs.target remote-fs.target network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hath
+SuccessExitStatus=143
+ExecStart=/usr/bin/java -jar HentaiAtHome.jar --download-dir={{ hath.download }}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

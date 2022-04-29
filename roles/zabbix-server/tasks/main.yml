@@ -1,0 +1,86 @@
+- name: install zabbix-server requirements
+  package:
+    name: fping
+    state: latest
+
+- name: setup zabbix repository
+  apt:
+    deb: "{{ zabbix_repo.debian }}"
+    state: present
+
+- name: install zabbix-server
+  package:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  loop:
+    - zabbix-server-mysql
+    - zabbix-frontend-php
+
+- name: create zabbix conf override folder
+  file:
+    path: /etc/zabbix/zabbix_server.conf.d/
+    state: directory
+
+- name: set zabbix-server settings
+  lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['DBHost', "{{ zabbix_server.db.host }}"]
+    - ['DBName', "{{ zabbix_server.db.name }}"]
+    - ['DBUser', "{{ zabbix_server.db.user }}"]
+    - ['DBPassword', "{{ zabbix_server.db.password }}"]
+    - ['DBPort', "3306"]
+    - ['CacheSize', '2G']
+    - ['ValueCacheSize', '512M']
+    - ['TrendCacheSize', '128M']
+    - ['HistoryIndexCacheSize', '128M']
+  notify: restart zabbix-server
+
+- name: setup zabbix-server database tls
+  lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['DBTLSConnect', 'verify-full']
+    - ['DBTLSCAFile', '/etc/ssl/certs/ca-certificates.crt']
+  when: zabbix_server.tls is defined and zabbix_server.tls
+  notify: restart zabbix-server
+
+- name: setup ca certificate for zabbix
+  copy:
+    dest: /etc/zabbix/ca.pem
+    content: "{{ zabbix_server.certificate.ca }}"
+  when: zabbix_server.certificate is defined
+
+- name: setup certificate for zabbix
+  copy:
+    dest: /etc/zabbix/cert.pem
+    content: "{{ zabbix_server.certificate.leaf }}"
+  when: zabbix_server.certificate is defined
+
+- name: setup certificate key for zabbix
+  copy:
+    dest: /etc/zabbix/cert.key.pem
+    content: "{{ zabbix_server.certificate.key }}"
+  when: zabbix_server.certificate is defined
+
+- name: zabbix configuration for certificates
+  lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['TLSCAFile', '/etc/zabbix/ca.pem']
+    - ['TLSCertFile', '/etc/zabbix/cert.pem']
+    - ['TLSKeyFile', '/etc/zabbix/cert.key.pem']
+  notify: restart zabbix-server
+
+- name: start services
+  service:
+    name: zabbix-server
+    state: started
+    enabled: yes

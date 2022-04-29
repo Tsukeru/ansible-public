@@ -1,0 +1,16 @@
+- name: install nfs
+  package:
+    name: nfs-kernel-server
+    state: present
+
+- name: setup nfs shares
+  template:
+    src: exports.j2
+    dest: /etc/exports
+  notify: refresh nfs shares
+
+- name: start nfs server
+  service:
+    name: nfs-server
+    state: started
+    enabled: yes

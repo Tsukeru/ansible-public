@@ -1,0 +1,47 @@
+- name: install git
+  package:
+    name: git
+    state: present
+
+- name: update python
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - python3
+    - python3-setuptools
+
+- name: create tautulli user
+  user:
+    name: tautulli
+    shell: /usr/sbin/nologin
+    system: yes
+    create_home: no
+
+- name: download tautulli
+  git:
+    repo: https://github.com/Tautulli/Tautulli.git
+    dest: /opt/tautulli
+
+- name: fix tautulli rights
+  file:
+    path: /opt/tautulli
+    state: directory
+    owner: tautulli
+    group: tautulli
+    recurse: yes
+
+- name: setup tautulli service
+  copy:
+    src: tautulli.service
+    dest: /etc/systemd/system/tautulli.service
+  notify: reload systemd
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: start tautulli
+  service:
+    name: tautulli
+    state: started
+    enabled: yes

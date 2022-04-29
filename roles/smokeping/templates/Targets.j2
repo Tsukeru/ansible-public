@@ -1,0 +1,47 @@
+*** Targets ***
+
+probe = FPing
+menu = Top
+title = {{ smokeping.title }}
+{% for key, value in (smokeping.local_items| default({}) | combine(smokeping.global_items, recursive=True)).items() %}
+
++ {{ key | regex_replace ("[^A-Za-z0-9]","") }}
+title = {{ key }}
+menu = {{ key }}
+{% if "host" in value %}
+{% if "probe" not in value %}
+probe = FPing
+{% endif %}
+{% for item_key, item_value in value.items() %}
+{{ item_key }} = {{ item_value }}
+{% endfor %}
+{% else %}
+{% for l2_key, l2_value in value.items() %}
+
+++ {{ l2_key | regex_replace ("[^A-Za-z0-9]","") }}
+title = {{ l2_key }}
+menu = {{ l2_key }}
+{% if "host" in l2_value %}
+{% if "probe" not in l2_value %}
+probe = FPing
+{% endif %}
+{% for item_key, item_value in l2_value.items() %}
+{{ item_key }} = {{ item_value }}
+{% endfor %}
+{% else %}
+{% for l3_key, l3_value in l2_value.items() | sort %}
+
++++ {{ l3_key | regex_replace ("[^A-Za-z0-9]","") }}
+title = {{ l3_key }}
+menu = {{ l3_key }}
+{% if "probe" not in l3_value %}
+probe = FPing
+{% endif %}
+{% for item_key, item_value in l3_value.items() %}
+{{ item_key }} = {{ item_value }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

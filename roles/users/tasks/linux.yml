@@ -1,0 +1,101 @@
+- name: update openssh and crypto-policies
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - openssh
+    - crypto-policies
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == '8'
+
+- name: ssh ca
+  copy:
+    content: "{{ ssh.ca }}"
+    dest: /etc/ssh/user_ca.pub
+    mode: 0644
+    owner: root
+    group: root
+
+- name: ssh configuration for ca
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    line: "{{ item }}"
+  loop:
+    - "TrustedUserCAKeys /etc/ssh/user_ca.pub"
+    - "CASignatureAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa"
+  when: ssh.ca is defined and ssh.ca
+  notify: restart sshd
+
+- name: remove outscale banner conf
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item }}"
+    state: absent
+  loop:
+    - "Match User"
+    - "  Banner"
+  notify: restart sshd
+
+- name: create sudo group
+  group:
+    name: sudo
+    state: present
+  when: ansible_os_family == 'Archlinux'
+
+- name: setup users (rhel)
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    append: yes
+  loop: "{{ users + host_users }}"
+  when: ansible_os_family == "RedHat"
+
+- name: setup users (debian)
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | replace('wheel', 'sudo') }}"
+    append: yes
+    shell: /bin/bash
+  loop: "{{ users + host_users }}"
+  when: ansible_os_family == "Debian" or ansible_os_family == "Archlinux"
+
+- name: setup authorized ssh keys
+  authorized_key:
+    user: "{{ item.name }}"
+    state: present
+    key: "{{ item.ssh_keys | join('\n') }}"
+    exclusive: yes
+  loop: "{{ users + host_users }}"
+  when: item.ssh_keys is defined and item.ssh_keys
+
+- name: setup sudoers (redhat)
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '^\%wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD:ALL'
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "RedHat"
+
+- name: setup sudoers conf
+  copy:
+    content: "{{ item[1] }}"
+    dest: "/etc/sudoers.d/{{ item[0] }}"
+    owner: root
+    group: root
+  when: ansible_os_family == "Debian" or ansible_os_family == "Archlinux"
+  loop:
+    - ['15-sudo-nopasswd', '%sudo ALL=(ALL) NOPASSWD:ALL']
+    - ['20-ssh-agent', 'Defaults env_keep+=SSH_AUTH_SOCK']
+
+- name: delete old users
+  user:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - centos
+    - debian
+    - ubuntu
+    - outscale
+    - cloud-user
+  ignore_errors: yes

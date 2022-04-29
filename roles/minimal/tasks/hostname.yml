@@ -1,0 +1,20 @@
+- name: set hostname
+  hostname:
+    name: "{{ inventory_hostname.split('.')[0] }}.{{ network.domain }}"
+
+- name: refresh facts
+  setup:
+
+- name: configure ipv4 hosts entry
+  lineinfile:
+    path: /etc/hosts
+    regexp: "^{{ ansible_default_ipv4.address }} "
+    line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname.split('.')[0] }}.{{ network.domain }} {{ inventory_hostname.split('.')[0] }}"
+  when: ansible_default_ipv4.address is defined
+
+- name: configure ipv6 hosts entry
+  lineinfile:
+    path: /etc/hosts
+    regexp: "^{{ ansible_default_ipv6.address }} "
+    line: "{{ ansible_default_ipv6.address }} {{ inventory_hostname.split('.')[0] }}.{{ network.domain }} {{ inventory_hostname.split('.')[0] }}"
+  when: ansible_default_ipv6.address is defined

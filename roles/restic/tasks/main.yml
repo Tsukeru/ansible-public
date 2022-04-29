@@ -1,0 +1,35 @@
+- name: install restic
+  package:
+    name: restic
+    state: present
+
+- name: setup restic service and timer
+  template:
+    src: "restic@.{{ item }}"
+    dest: "/etc/systemd/system/restic@.{{ item }}"
+  loop: [ "service", "timer" ]
+  notify: reload systemd
+
+- name: setup service override folder
+  file:
+    dest: /etc/systemd/system/restic@{{ item.name | replace('-', '\\x2d') | replace('/', '-') }}.service.d
+    state: directory
+  when: item.exclude is defined
+  loop: "{{ restic.paths }}"
+
+- name: setup exclusions
+  copy:
+    dest: /etc/systemd/system/restic@{{ item.name | replace('-', '\\x2d') | replace('/', '-') }}.service.d/10-exclude.conf
+    content: |
+      [Service]
+      Environment="RESTIC_EXCLUDE={{ item.exclude }}"
+  when: item.exclude is defined
+  loop: "{{ restic.paths }}"
+  notify: reload systemd
+
+- name: start restic timers
+  service:
+    name: "restic@{{ item.name | default(item) | replace('-', '\\x2d') | replace('/', '-') }}.timer"
+    state: started
+    enabled: yes
+  loop: "{{ restic.paths }}"

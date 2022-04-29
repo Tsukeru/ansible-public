@@ -1,0 +1,82 @@
+- name: install requirements
+  package:
+    name:
+      - python-pip
+      - python-yaml
+      - python-elasticsearch
+      - python-setuptools
+      - python-poetry
+      - git
+    state: present
+
+- name: install elasticsearch
+  package:
+    name: elasticsearch
+    state: present
+
+- name: download fs2es-indexer
+  git:
+    repo: https://github.com/eru/fs2es-indexer.git
+    dest: /opt/fs2es-indexer
+    version: develop
+
+- name: install fs2es-indexer
+  command:
+    cmd: poetry install
+    chdir: /opt/fs2es-indexer
+    creates: /opt/fs2es-indexer/poetry.lock
+
+- name: start elasticsearch
+  service:
+    name: elasticsearch
+    state: started
+    enabled: yes
+
+- name: setup kernel settings for ES
+  sysctl:
+    name: vm.max_map_count
+    value: 262144
+    state: present
+    reload: yes
+
+- name: set ES settings
+  lineinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    regexp: '^{{ item[0] }}\:'
+    line: '{{ item[0] }}: {{ item[1] }}'
+  loop:
+    - ['xpack.security.enabled', 'false']
+    - ['discovery.type', 'single-node']
+    - ['network.host', "'[::]'"]
+  notify: restart es
+
+- name: create conf directory
+  file:
+    path: /etc/fs2es-indexer
+    state: directory
+
+- name: setup fs2es conf
+  template:
+    src: config.yml.j2
+    dest: /etc/fs2es-indexer/config.yml
+  notify: restart fs2es-indexer
+
+- name: setup fs2es mapping
+  get_url:
+    url: https://raw.githubusercontent.com/eru/fs2es-indexer/develop/mapping.json
+    dest: /etc/fs2es-indexer/mapping.json
+  notify: restart fs2es-indexer
+
+- name: setup fs2es service
+  copy:
+    src: fs2es-indexer.service
+    dest: /etc/systemd/system/fs2es-indexer.service
+  notify:
+    - reload systemd
+    - restart fs2es-indexer
+
+- name: enable fs2es-indexer
+  service:
+    name: fs2es-indexer
+    enabled: yes
+    state: started

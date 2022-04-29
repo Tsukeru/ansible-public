@@ -1,0 +1,59 @@
+- name: install git
+  package:
+    name: git
+    state: present
+
+- name: install imagemagick
+  package:
+    name: imagemagick
+    state: present
+
+- name: create snipeit user
+  user:
+    name: snipeit
+    system: yes
+    shell: /bin/false
+    home: /opt/snipeit
+    create_home: no
+
+- name: download snipeit
+  git:
+    repo: https://github.com/snipe/snipe-it
+    dest: /opt/snipeit
+    update: yes
+
+- name: set snipeit owner
+  file:
+    path: /opt/snipeit
+    owner: snipeit
+    group: snipeit
+    recurse: yes
+
+- name: pull dependencies
+  command:
+    cmd: /usr/bin/composer install --no-dev --prefer-source
+    chdir: /opt/snipeit
+    creates: /opt/snipeit/vendor/
+  become_user: snipeit
+
+- name: copy default configuration
+  copy:
+    src: /opt/snipeit/.env.example
+    dest: /opt/snipeit/.env
+    remote_src: yes
+    force: no
+
+- name: set snipeit configuration
+  lineinfile:
+    path: /opt/snipeit/.env
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['DB_HOST', "{{ snipeit.database.host }}"]
+    - ['DB_DATABASE', "{{ snipeit.database.db | default('snipeit') }}"]
+    - ['DB_USERNAME', "{{ snipeit.database.username | default('snipeit') }}"]
+    - ['DB_PASSWORD', "{{ snipeit.database.password }}"]
+    - ['APP_KEY', "'{{ snipeit.key }}'"]
+    - ['APP_TIMEZONE', 'Europe/Paris']
+    - ['APP_URL', '{{ snipeit.url }}']
+

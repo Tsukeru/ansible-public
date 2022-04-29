@@ -1,0 +1,92 @@
+- name: install zabbix-proxy software
+  package:
+    name: fping
+    state: present
+
+- name: setup zabbix repository
+  apt:
+    deb: "{{ zabbix_repo.debian }}"
+    state: present
+
+- name: install zabbix-proxy
+  package:
+    name: 
+      - zabbix-proxy-mysql
+      - zabbix-sql-scripts
+    state: latest
+    update_cache: yes
+
+- name: create zabbix proxy db user
+  community.mysql.mysql_user:
+    name: zabbix-proxy
+    password: zabbix-proxy
+    state: present
+    priv: 'zabbix-proxy.*:ALL,GRANT'
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: create zabbix-proxy db
+  community.mysql.mysql_db:
+    name: zabbix-proxy
+    state: import
+    encoding: utf8
+    collation: utf8mb3_bin
+    target: /usr/share/doc/zabbix-sql-scripts/mysql/proxy.sql
+    login_unix_socket: /run/mysqld/mysqld.sock
+  ignore_errors: yes
+
+- name: set zabbix proxy parameters
+  lineinfile:
+    path: /etc/zabbix/zabbix_proxy.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['Server', "{{ zabbix.server | join(',') }}"]
+    - ['Hostname', "{{ zabbix.proxy_name | default(inventory_hostname.split('.')[0]) }}"]
+    - ['DBHost', 'localhost']
+    - ['DBName', 'zabbix-proxy']
+    - ['DBUser', 'zabbix-proxy']
+    - ['DBPassword', 'zabbix-proxy']
+    - ['DBSocket', '/run/mysqld/mysqld.sock']
+    - ['StartPollers', '8']
+    - ['StartIPMIPollers', '0']
+    - ['StartVMwareCollectors', '8']
+    - ['VMwareCacheSize', '512M']
+    - ['CacheSize', '1G']
+    - ['StartPingers', '12']
+  notify: restart zabbix-proxy
+
+- name: setup ca certificate for zabbix
+  copy:
+    dest: /etc/zabbix/ca.pem
+    content: "{{ zabbix_proxy.certificate.ca }}"
+  when: zabbix_proxy.certificate is defined
+
+- name: setup certificate for zabbix
+  copy:
+    dest: /etc/zabbix/cert.pem
+    content: "{{ zabbix_proxy.certificate.leaf }}"
+  when: zabbix_proxy.certificate is defined
+
+- name: setup certificate key for zabbix
+  copy:
+    dest: /etc/zabbix/cert.key.pem
+    content: "{{ zabbix_proxy.certificate.key }}"
+  when: zabbix_proxy.certificate is defined
+
+- name: zabbix configuration for certificates
+  lineinfile:
+    path: /etc/zabbix/zabbix_proxy.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['TLSCAFile', '/etc/zabbix/ca.pem']
+    - ['TLSCertFile', '/etc/zabbix/cert.pem']
+    - ['TLSKeyFile', '/etc/zabbix/cert.key.pem']
+    - ['TLSConnect', 'cert']
+  notify: restart zabbix-proxy
+
+- name: start zabbix-proxy
+  service:
+    name: zabbix-proxy
+    state: started
+    enabled: yes

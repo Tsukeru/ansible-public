@@ -1,0 +1,8 @@
+- name: install nvidia drivers
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - nvidia
+    - libva-vdpau-driver
+  notify: reboot

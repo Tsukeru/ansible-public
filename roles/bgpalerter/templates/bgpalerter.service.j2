@@ -1,0 +1,14 @@
+[Unit]
+Description=BGPalerter
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+User=bgpalerter
+WorkingDirectory=/var/lib/bgpalerter
+ExecStart=/usr/local/bin/bgpalerter -c /etc/bgpalerter/config.yml
+Environment=NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-bundle.crt
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,4 @@
+- name: restart qbittorrent
+  service:
+    name: qbittorrent-nox.service
+    state: restarted

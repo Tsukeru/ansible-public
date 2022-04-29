@@ -1,0 +1,9 @@
+concurrent = {{ gitlab.concurrent_runner | default('2') }}
+check_interval = 0
+
+[[runners]]
+  name = "{{ inventory_hostname }}.{{ zabbix.category }}"
+  executor = "docker"
+  token = "{{ gitlab_runner_token }}"
+  url = "{{ gitlab.url }}"
+

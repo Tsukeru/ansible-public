@@ -1,0 +1,8 @@
+{% if smtp.relays is defined %}
+{% for relay in smtp.relays %}
+{{ relay.relay }} {{ relay.credentials }}
+{% endfor %}
+{% endif %}
+{% if smtp.default_relay is defined %}
+[{{ smtp.default_relay.host }}]:{{ smtp.default_relay.port }} {{ smtp.default_relay.username }}:{{ smtp.default_relay.password }}
+{% endif %}

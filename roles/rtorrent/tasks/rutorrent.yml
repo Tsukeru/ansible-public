@@ -1,0 +1,70 @@
+- name: create rutorrent directory
+  file:
+    path: /var/www/rutorrent
+    state: directory
+    owner: rtorrent
+    group: rtorrent
+
+- name: download rutorrent
+  get_url:
+    url: "{{ rtorrent.rutorrent.download }}"
+    dest: /tmp/rutorrent.tar.gz
+
+- name: extract rutorrent
+  unarchive:
+    src: /tmp/rutorrent.tar.gz
+    dest: /var/www/rutorrent/
+    extra_opts: [--strip-components=1]
+    remote_src: yes
+    creates: /var/www/conf/config.php
+    owner: rtorrent
+    group: rtorrent
+
+- name: configure rutorrent socket
+  lineinfile:
+    path: /var/www/rutorrent/conf/config.php
+    regexp: '^  \$scgi_host ='
+    line: '     $scgi_host = "unix:///var/run/rtorrent/rtorrent.sock";'
+
+- name: disable rutorrent socket port
+  lineinfile:
+    path: /var/www/rutorrent/conf/config.php
+    regexp: '^  \$scgi_port ='
+    line: '     $scgi_port = 0;'
+
+- name: set rutorrent executables
+  lineinfile:
+    path: /var/www/rutorrent/conf/config.php
+    regexp: '"{{ item }}"(.*)=>'
+    insertafter: '\$pathToExternals'
+    line: "                \"{{ item[0] }}\" => '/bin/{{ item[1] }}',"
+  loop:
+    - ['php', '/bin/php7']
+    - ['curl', '/bin/curl']
+    - ['gzip', '/bin/gzip']
+    - ['id', '/bin/id']
+    - ['stat', '/bin/stat']
+    - ['pgrep', '/bin/pgrep']
+
+- name: enable plugins by default
+  community.general.ini_file:
+    path: /var/www/rutorrent/conf/plugins.ini
+    section: default
+    option: enabled
+    value: 'yes'
+
+- name: disable selected plugins
+  community.general.ini_file:
+    path: /var/www/rutorrent/conf/plugins.ini
+    section: "{{ item }}"
+    option: enabled
+    value: 'no'
+  loop: "{{ rtorrent.rutorrent.disable_plugins }}"
+
+- name: install additional rutorrent plugins
+  git:
+    repo: "{{ item[1] }}"
+    dest: "/var/www/rutorrent/plugins/{{ item[0] }}"
+  loop:
+    - [ "geoip2", "https://github.com/Micdu70/geoip2-rutorrent.git" ]
+

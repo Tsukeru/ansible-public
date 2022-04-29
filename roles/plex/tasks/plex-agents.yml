@@ -1,0 +1,103 @@
+- name: install lxml
+  package:
+    name: python3-lxml
+    state: present
+
+- name: create plex series scanner directory
+  file:
+    path: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Scanners/Series/
+    state: directory
+    owner: plex
+    group: plex
+
+- name: check if hama needs an update
+  git:
+    repo: https://github.com/ZeroQI/Hama.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/Hama.bundle
+  check_mode: true
+  notify: stop plex
+
+- name: check if ass needs an update
+  get_url:
+    url: https://github.com/ZeroQI/Absolute-Series-Scanner/raw/master/Scanners/Series/Absolute%20Series%20Scanner.py
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Scanners/Series/Absolute Series Scanner.py
+  check_mode: true
+  notify: stop plex
+
+- name: check if lambda needs an update
+  git:
+    repo: https://github.com/ZeroQI/Lambda.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/Lambda.bundle
+  check_mode: true
+  notify: stop plex
+
+- name: check if xbmcnfomoviesimporter needs an update
+  git:
+    repo: https://github.com/gboudreau/XBMCnfoMoviesImporter.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/XBMCnfoMoviesImporter.bundle
+  check_mode: true
+  notify: stop plex
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: update ass
+  get_url:
+    url: https://github.com/ZeroQI/Absolute-Series-Scanner/raw/master/Scanners/Series/Absolute%20Series%20Scanner.py
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Scanners/Series/Absolute Series Scanner.py
+    owner: plex
+    group: plex
+  notify: restart plex
+
+- name: update hama
+  git:
+    repo: https://github.com/ZeroQI/Hama.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/Hama.bundle
+  notify: restart plex
+
+- name: update lambda
+  git:
+    repo: https://github.com/ZeroQI/Lambda.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/Lambda.bundle
+  notify: restart plex
+
+- name: update xbmcnfomoviesimporter
+  git:
+    repo: https://github.com/gboudreau/XBMCnfoMoviesImporter.bundle.git
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/XBMCnfoMoviesImporter.bundle
+  notify: restart plex
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: hama configuration
+  community.general.xml:
+    path: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Preferences/com.plexapp.agents.hama.xml
+    xpath: "/{{ item.name }}"
+    value: "{{ item.value }}"
+  loop:
+    - name: PluginPreferences/EpisodeLanguagePriority
+      value: "x-jat, en, ja"
+    - name: PluginPreferences/SerieLanguagePriority
+      value: "x-jat, en, ja"
+    - name: PluginPreferences/PosterLanguagePriority
+      value: "ja, main, en"
+    - name: PluginPreferences/collections
+      value: "None"
+    - name: PluginPreferences/load_all_poster_sources
+      value: "true"
+    - name: PluginPreferences/adult
+      value: "true"
+
+- name: lambda configuration
+  template:
+    src: com.plexapp.agents.lambda.xml.j2
+    dest: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Preferences/com.plexapp.agents.lambda.xml
+
+- name: change ownership of scanners to plex
+  file:
+    path: /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-ins/
+    owner: plex
+    group: plex
+    state: directory
+    recurse: yes

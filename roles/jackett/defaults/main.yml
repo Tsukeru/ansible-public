@@ -1,0 +1,2 @@
+jackett:
+  binary: https://github.com/Jackett/Jackett/releases/download/v0.18.225/Jackett.Binaries.LinuxAMDx64.tar.gz

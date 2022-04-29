@@ -1,0 +1,8 @@
+zabbix:
+  version: 6.0
+  unsafe_parameters: no
+  userparameters: []
+  timeout: 3
+  root_mode: no
+
+zabbix_repo: "https://repo.zabbix.com/zabbix/{{ zabbix.version }}/debian/pool/main/z/zabbix-release/zabbix-release_{{ zabbix.version }}-1+debian{{ ansible_distribution_major_version }}_all.deb"

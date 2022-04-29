@@ -1,0 +1,8 @@
+- name: setup ssh keys
+  authorized_key:
+    user: "root"
+    state: present
+    key: "{{ item.ssh_keys | join('\n') }}"
+    exclusive: yes
+  loop: "{{ users + host_users }}"
+  when: item.groups is defined and ("wheel" in item.groups or "sudo" in item.groups)

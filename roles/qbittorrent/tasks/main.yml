@@ -1,0 +1,76 @@
+- name: install qbittorrent
+  apt:
+    name: qbittorrent-nox
+    default_release: testing
+    state: latest
+
+- name: create service
+  template:
+    src: qbittorrent-nox.service.j2
+    dest: /etc/systemd/system/qbittorrent-nox.service
+  notify: restart qbittorrent
+
+- name: mask provided unit name
+  systemd:
+    name: qbittorrent-nox@.service
+    masked: yes
+
+- name: setup qbittorrent override folder
+  file:
+    path: /etc/systemd/system/qbittorrent-nox.service.d/
+    state: directory
+
+- name: setup mount requirement
+  template:
+    src: qbittorrent-nox-mount.conf.j2
+    dest: /etc/systemd/system/qbittorrent-nox.service.d/10-requirements.conf
+
+- name: start qbittorrent-nox
+  service:
+    name: qbittorrent-nox.service
+    state: started
+    enabled: yes
+
+- name: set qbittorrent webui conf
+  ini_file:
+    path: /root/.config/qBittorrent/qBittorrent.conf
+    section: 'Preferences'
+    option: "{{ item[0] }}"
+    value: "{{ item[1] }}"
+  loop:
+    - ['WebUI\Address', '::1']
+    - ['WebUI\UseUPnP', 'false']
+    - ['WebUI\CSRFProtection', 'false']
+    - ['WebUI\LocalHostAuth', 'false']
+  notify: restart qbittorrent
+
+- name: set bittorrent conf
+  ini_file:
+    path: /root/.config/qBittorrent/qBittorrent.conf
+    section: "{{ item[0] }}"
+    option: "{{ item[1] }}"
+    value: "{{ item[2] }}"
+  loop:
+    - ['BitTorrent', 'Session\DefaultSavePath', '{{ qbittorrent.directory }}']
+    - ['BitTorrent', 'Session\Port', '{{ qbittorrent.port }}']
+    - ['BitTorrent', 'Downloads\UseIncompleteExtension', 'true']
+    - ['BitTorrent', 'WebUI\UseUPnP', 'false']
+    - ['BitTorrent', 'Session\ReannounceWhenAddressChanged', 'true']
+    - ['BitTorrent', 'Session\DisableAutoTMMByDefault', 'false']
+    - ['Network', 'PortForwardingEnabled', 'false']
+
+- name: disable qbittorrent auth
+  ini_file:
+    path: /root/.config/qBittorrent/qBittorrent.conf
+    section: 'Preferences'
+    option: 'WebUI\LocalHostAuth'
+    value: 'false'
+  when: qbittorrent.disable_auth is not defined or qbittorrent.disable_auth
+
+- name: set automatic handling of torrent categories
+  ini_file:
+    path: /root/.config/qBittorrent/qBittorrent.conf
+    section: 'BitTorrent'
+    option: 'Session\DisableAutoTMMByDefault'
+    value: 'false'
+  notify: restart qbittorrent

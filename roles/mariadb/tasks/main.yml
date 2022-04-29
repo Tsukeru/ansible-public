@@ -1,0 +1,82 @@
+- name: install mariadb
+  package:
+    name: mariadb-server
+    state: present
+
+- name: start mariadb
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: install python3-PyMySQL
+  package:
+    name: python3-pymysql
+    state: present
+
+- name: disable binlog
+  copy: 
+    dest: /etc/mysql/conf.d/disable_binlog.cnf
+    content: |
+      [mysqld]
+      skip-log-bin
+  notify: restart mariadb
+
+- name: set max packet size
+  copy:
+    dest: /etc/mysql/conf.d/max_packet_size.cnf
+    content: |
+      [mysqld]
+      max_allowed_packet=256M
+  notify: restart mariadb
+
+- name: set encoding
+  copy:
+    dest: /etc/mysql/conf.d/encoding.cnf
+    content: |
+      [mysqld]
+      character-set-server=utf8mb4
+      collation-server=utf8mb4_bin
+  notify: restart mariadb
+
+- name: listen publicly
+  lineinfile:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: '^bind-address'
+    line: 'bind-address = ::'
+  when: mariadb.public
+  notify: restart mariadb
+
+- name: create certs folder
+  file:
+    path: /etc/mysql/certs
+    state: directory
+    mode: '0700'
+    owner: mysql
+    group: mysql
+  when: mariadb.tls is defined and mariadb.tls
+
+- name: install mariadb certificates
+  copy:
+    dest: "/etc/mysql/certs/{{ item[0] }}"
+    content: "{{ item[1] }}"
+    mode: '0600'
+    owner: mysql
+    group: mysql
+  loop:
+    - [ "cert.pem", "{{ mariadb.tls.cert }}" ]
+    - [ "key.pem", "{{ mariadb.tls.key }}" ]
+    - [ "ca.pem", "{{ mariadb.tls.ca }}" ]
+  notify: restart mariadb
+  when: mariadb.tls is defined and mariadb.tls
+
+- name: setup tls in mariadb
+  copy:
+    dest: "/etc/mysql/conf.d/tls.cnf"
+    content: |
+      [mariadb]
+      ssl_cert = /etc/mysql/certs/cert.pem
+      ssl_key = /etc/mysql/certs/key.pem
+      ssl_ca = /etc/mysql/certs/ca.pem
+  notify: restart mariadb
+  when: mariadb.tls is defined and mariadb.tls

@@ -1,0 +1,8 @@
+- name: restart oxidized
+  service:
+    name: oxidized
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

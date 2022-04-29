@@ -1,0 +1,83 @@
+- name: install php
+  package:
+    name:
+      - php-fpm
+      - php-gd
+      - php-snmp
+      - php-intl
+      - php-geoip
+      - php-ldap
+      - php-mysqli
+      - php-pdo-mysql
+      - php-curl
+      - php-dom
+      - php-xmlwriter
+      - php-zip
+      - php-bcmath
+      - php-mbstring
+      - php-apcu
+    state: present
+
+- name: install composer
+  get_url:
+    url: https://getcomposer.org/composer-stable.phar
+    dest: /usr/bin/composer
+    mode: '0755'
+
+- name: set php timezone
+  ini_file:
+    path: /etc/php/7.4/fpm/php.ini
+    section: Date
+    option: 'date.timezone'
+    value: 'Europe/Paris'
+  notify: restart php-fpm
+
+- name: delete default fpm
+  file:
+    path: /etc/php/7.4/fpm/pool.d/www.conf
+    state: absent
+  notify: restart php-fpm
+
+- name: setup fpm
+  template:
+    src: php-fpm.conf.j2
+    dest: "/etc/php/7.4/fpm/pool.d/{{ item.name }}.conf"
+  loop: "{{ php.fpm }}"
+  notify: restart php-fpm
+
+- name: setup systemd override directory
+  file:
+    path: /etc/systemd/system/php7.4-fpm.service.d
+    state: directory
+
+- name: setup systemd override
+  copy:
+    src: 10-php-fpm-root.conf
+    dest: /etc/systemd/system/php7.4-fpm.service.d/10-php-fpm-root.conf
+  notify: restart php-fpm
+
+- name: set php parameters
+  lineinfile:
+    path: /etc/php/7.4/fpm/php.ini
+    regexp: '^{{ item[0] }} = '
+    line: '{{ item[0] }} = {{ item[1] }}'
+  loop:
+    - ['upload_max_filesize', '20M']
+    - ['post_max_size', '20M']
+    - ['max_file_uploads', '100']
+    - ['max_execution_time', '300']
+    - ['max_input_time', '300']
+    - ['date.timezone', 'Europe/Paris']
+  notify: restart php-fpm
+
+- name: start php-fpm
+  service:
+    name: php7.4-fpm
+    state: started
+    enabled: yes
+
+- name: set php-fpm log rights
+  file:
+    path: /var/log/php-fpm
+    mode: '0777'
+    recurse: yes

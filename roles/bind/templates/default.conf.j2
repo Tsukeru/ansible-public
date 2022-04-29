@@ -1,0 +1,13 @@
+view default {
+        match-clients { any; };
+        allow-recursion { any; };
+
+{% for zone in bind.internal_zones %}
+	zone "{{ zone }}" {
+		in-view "internal";
+		forwarders { };
+	};
+{% endfor %}
+
+	include "/etc/named/forwarded.conf";
+};

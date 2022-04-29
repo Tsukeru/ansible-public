@@ -1,0 +1,9 @@
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart multicast-relay
+  service:
+    name: multicast-relay
+    state: restarted
+

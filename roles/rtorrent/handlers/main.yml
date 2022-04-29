@@ -1,0 +1,21 @@
+- name: restart rtorrent
+  service:
+    name: rtorrent
+    state: restarted
+
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+
+- name: restart php
+  service:
+    name: php-fpm
+    state: restarted
+  when: not ansible_distribution == 'Ubuntu'
+
+- name: restart php
+  service:
+    name: php7.4-fpm
+    state: restarted
+  when: ansible_distribution == 'Ubuntu'

@@ -1,0 +1,34 @@
+- name: refresh pacman cache
+  community.general.pacman:
+    update_cache: yes
+
+- name: reboot
+  reboot:
+
+- name: restart samba
+  service:
+    name: "{{ item }}"
+    state: restarted
+  loop: ['smbd', 'nmbd', 'winbind']
+
+- name: restart systemd-resolved
+  service:
+    name: systemd-resolved
+    state: restarted
+
+- name: refresh nfs shares
+  command: '/usr/sbin/exportfs -ra'
+
+- name: restart zrepl
+  service:
+    name: zrepl
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart zabbix-agent
+  service:
+    name: zabbix-agent2
+    state: restarted

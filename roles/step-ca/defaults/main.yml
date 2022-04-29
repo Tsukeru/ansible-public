@@ -1,0 +1,4 @@
+step_ca:
+  cli_version: 0.18.2
+  ca_version: 0.18.2
+  yubikey: no

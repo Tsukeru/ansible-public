@@ -1,0 +1,3 @@
+{% for host in smtp.tls %}
+{{ host.domain }} {{ host.key }} {{ host.cert }}
+{% endfor %}

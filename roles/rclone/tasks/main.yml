@@ -1,0 +1,134 @@
+- name: Install fuse
+  package:
+    name: fuse
+    state: latest
+
+- name: Install rclone
+  apt:
+    deb: https://downloads.rclone.org/rclone-current-linux-amd64.deb
+    state: present
+
+- name: Create rclone log directories
+  file:
+    path: "/var/log/rclone/{{ item }}/"
+    state: directory
+  loop: ['mounts', 'jobs']
+
+- name: Create rclone directory
+  file:
+    path: "/etc/rclone"
+    state: directory
+    mode: '755'
+
+- name: Create rclone keys directory
+  file:
+    path: "/etc/rclone/keys"
+    state: directory
+    mode: '700'
+
+- name: Create rclone mount directories
+  file:
+    path: "{{ item.mountpoint }}"
+    state: directory
+  loop: "{{ rclone.mounts }}"
+  when: item.mountpoint is defined
+
+- name: Install rclone config files
+  template:
+    src: rclone.conf.j2
+    dest: "/etc/rclone/rclone.conf"
+    mode: '600'
+
+- name: Install rclone auth files
+  copy:
+    content: "{{ item.account }}"
+    dest: "/etc/rclone/keys/{{ item.name }}.json"
+  loop: "{{ rclone.remotes }}"
+  when: item.account is defined
+
+- name: Create rclone systemd override directories
+  file:
+    path: "/etc/systemd/system/rclone@{{ item.name }}.service.d/"
+    state: directory
+  loop: "{{ rclone.mounts }}"
+  when: rclone.mounts is defined
+
+- name: create rclone systemd override directories
+  file:
+    path: "/etc/systemd/system/rclone-job@{{ item.name }}.service.d/"
+    state: directory
+  loop: "{{ rclone.jobs }}"
+  when: rclone.jobs is defined
+
+- name: create rclone systemd timers override directories
+  file:
+    path: "/etc/systemd/system/rclone-job@{{ item.name }}.timer.d/"
+    state: directory
+  loop: "{{ rclone.jobs }}"
+  when: rclone.jobs is defined and item.calendar is defined
+
+- name: Create rclone systemd override configurations
+  template:
+    src: "rclone@.conf.j2"
+    dest: "/etc/systemd/system/rclone@{{ item.name }}.service.d/10-env.conf"
+  loop: "{{ rclone.mounts }}"
+  notify: reload systemd
+  when: rclone.mounts is defined
+
+- name: Create rclone-job systemd override directories
+  file:
+    path: "/etc/systemd/system/rclone-job@{{ item.name }}.service.d/"
+    state: directory
+  loop: "{{ rclone.job }}"
+  when: rclone.job is defined
+
+- name: Create rclone-job systemd override configurations
+  template:
+    src: "rclone-job@.conf.j2"
+    dest: "/etc/systemd/system/rclone-job@{{ item.name }}.service.d/10-env.conf"
+  loop: "{{ rclone.jobs }}"
+  notify: reload systemd
+  when: rclone.jobs is defined
+
+- name: Create rclone-job systemd timers override configurations
+  template:
+    src: "rclone-job@.timer.j2"
+    dest: "/etc/systemd/system/rclone-job@{{ item.name }}.timer.d/10-timer.conf"
+  loop: "{{ rclone.jobs }}"
+  notify: reload systemd
+  when: rclone.jobs is defined and item.calendar is defined
+
+- name: Install rclone service
+  template:
+    src: "rclone@.service.j2"
+    dest: "/etc/systemd/system/rclone@.service"
+  notify: reload systemd
+
+- name: install rclone-job service
+  template:
+    src: "rclone-job@.service.j2"
+    dest: "/etc/systemd/system/rclone-job@.service"
+  notify: reload systemd
+
+- name: install rclone-job timer
+  copy:
+    src: "rclone-job@.timer"
+    dest: "/etc/systemd/system/rclone-job@.timer"
+  notify: reload systemd
+
+- name: start rclone mounts
+  systemd:
+    name: "rclone@{{ item.name }}"
+    state: started
+    enabled: yes
+  loop: "{{ rclone.mounts }}"
+  when: rclone.mounts is defined
+
+- name: start rclone-job timers
+  systemd:
+    name: "rclone-job@{{ item.name }}.timer"
+    state: started
+    enabled: yes
+  loop: "{{ rclone.jobs }}"
+  when: rclone.jobs is defined
+

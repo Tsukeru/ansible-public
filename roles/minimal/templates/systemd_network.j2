@@ -1,0 +1,85 @@
+[Match]
+Name={{ item.name }}
+
+[Link]
+MTUBytes={{ item.mtu | default('1500') }}
+
+[Network]
+{% if item.ip is defined and item.ip == 'dhcp' %}
+DHCP=yes
+{% endif %}
+{% if item.ip is defined and item.ip == 'link-local' %}
+{% if item.ipv6 is defined and item.ipv6 %}
+LinkLocalAddressing=yes
+{% else %}
+LinkLocalAddressing=ipv4
+{% endif %}
+{% endif %}
+{% if item.ip is defined and item.ip.address is defined %}
+Address={{ item.ip.address }}
+{% if item.ip.gateway is defined %}
+Gateway={{ item.ip.gateway }}
+{% endif %}
+{% endif %}
+{% if item.ipv6 is defined and item.ipv6.address is defined %}
+Address={{ item.ipv6.address }}
+{% if item.ipv6.gateway is defined %}
+Gateway={{ item.ipv6.gateway }}
+{% endif %}
+{% endif %}
+{% if (item.ipv6 is defined and item.ipv6 != 'autoconf' and item.ipv6 != 'auto') or (item.ipv6 is not defined or not item.ipv6) %}
+IPv6AcceptRA=no
+{% endif %}
+{% if item.mdns is defined and item.mdns %}
+MulticastDNS=yes
+{% endif %}
+{% if item.ipv6.advertise is defined %}
+IPv6SendRA=yes
+{% endif %}
+
+{% if item.defroute is not defined or not item.defroute %}
+[DHCPv4]
+UseGateway=no
+
+[IPv6AcceptRA]
+UseGateway=no
+
+{% endif %}
+{% if item.ipv6.advertise is defined %}
+[IPv6SendRA]
+{% if item.ipv6.advertise.flags.managed is defined and item.ipv6.advertise.flags.managed %}
+OtherInformation=true
+{% endif %}
+{% if item.ipv6.advertise.flags.other is defined and item.ipv6.advertise.flags.other %}
+OtherInformation=true
+{% endif %}
+{% if item.ipv6.advertise.router is defined and not item.ipv6.advertise.router %}
+RouterLifetimeSec=0
+{% endif %}
+
+[IPv6Prefix]
+Prefix={{ item.ipv6.advertise.prefix }}
+Assign=yes
+{% endif %}
+
+{% if item.routes is defined %}
+{% for route in item.routes %}
+[Route]
+Destination={{ route[0] }}
+{% if route[1] is defined %}
+Gateway={{ route[1] }}
+{% else %}
+{% if route[0] | ansible.netcommon.ipv4 %}
+{% if item.ip == 'dhcp' %}
+Gateway=_dhcp4
+{% else %}
+Gateway={{ item.ip.gateway }}
+{% endif %}
+{% else %}
+Gateway=_ipv6ra
+{% endif %}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+

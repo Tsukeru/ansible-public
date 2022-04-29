@@ -1,0 +1,10 @@
+[Unit]
+Description=Rclone Job %I
+Requires=rclone-job@%I.service
+
+[Timer]
+Unit=rclone-job@%I.service
+OnCalendar=*-*-* *:*:00
+
+[Install]
+WantedBy=timers.target

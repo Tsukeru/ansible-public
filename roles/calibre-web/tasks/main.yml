@@ -1,0 +1,45 @@
+- name: install dependencies
+  package:
+    name: 
+      - openldap
+      - libldap
+      - python-pip
+      - python-setuptools
+    state: present
+
+- name: libldap workaround
+  copy:
+    content: 'INPUT ( libldap.so )'
+    dest: /usr/lib64/libldap_r.so
+
+- name: install calibre-web
+  pip:
+    name: calibreweb
+
+- name: create calibre-web data folder
+  file:
+    name: /var/calibre-web
+    state: directory
+
+- name: setup calibre-web directory
+  template:
+    src: calibre-web.service.j2
+    dest: /etc/systemd/system/calibre-web.service
+  notify: reload systemd
+
+- name: start calibre-web
+  service:
+    name: calibre-web
+    state: started
+    enabled: yes
+
+- name: install additional modules
+  pip:
+    name: "calibreweb[{{ item }}]"
+    state: present
+  loop:
+    - ldap
+    - metadata
+    - kobo
+  notify: restart calibre-web
+

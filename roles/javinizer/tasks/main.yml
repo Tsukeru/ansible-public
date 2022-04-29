@@ -1,0 +1,20 @@
+- name: create javinizer data dir
+  file:
+    path: /data/javinizer
+    state: directory
+
+- name: create javinizer conf
+  get_url:
+    url: https://raw.githubusercontent.com/jvlflame/Javinizer/master/src/Javinizer/jvSettings.json
+    dest: /data/javinizer/jvSettings.json
+
+- name: create javinizer container
+  docker_container:
+    name: javinizer
+    image: jvlflame/javinizer:latest
+    state: started
+    volumes:
+      - /data/javinizer/jvSettings.json:/home/jvSettings.json
+      - "{{ shares[0].mountpoint }}:{{ shares[0].mountpoint }}"
+    published_ports:
+      - "[::1]:8600:8600"

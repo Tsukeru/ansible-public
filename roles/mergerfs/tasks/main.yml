@@ -1,0 +1,44 @@
+- name: install mergerfs
+  package:
+    name: mergerfs
+    state: present
+
+- name: Install mergerfs service
+  copy:
+    src: "mergerfs@.service"
+    dest: "/etc/systemd/system/mergerfs@.service"
+  notify: reload systemd
+
+- name: Create mergerfs systemd override directories
+  file:
+    path: "/etc/systemd/system/mergerfs@{{ item.name }}.service.d"
+    state: directory
+  loop: "{{ mergerfs }}"
+
+- name: Create mergerfs systemd env override configurations
+  template:
+    src: "env-mergerfs@.conf.j2"
+    dest: "/etc/systemd/system/mergerfs@{{ item.name }}.service.d/20-env.conf"
+  loop: "{{ mergerfs }}"
+  notify: reload systemd
+
+- name: Create mergerfs systemd requirements override configurations
+  template:
+    src: "requirements-mergerfs@.conf.j2"
+    dest: "/etc/systemd/system/mergerfs@{{ item.name }}.service.d/10-requirements.conf"
+  when: item.requirements is defined
+  loop: "{{ mergerfs }}"
+  notify: reload systemd
+
+- name: Create mountpoints
+  file:
+    path: "{{ item.mountpoint }}"
+    state: directory
+  loop: "{{ mergerfs }}"
+
+- name: Start mergerfs services
+  systemd:
+    name: "mergerfs@{{ item.name }}"
+    state: started
+    enabled: yes
+  loop: "{{ mergerfs }}"

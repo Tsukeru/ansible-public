@@ -1,0 +1,6 @@
+[Time]
+{% if network.ntp.servers is defined %}
+NTP={{ network.ntp.servers | join(', ') }}
+{% elif network.ntp.pools is defined %}
+NTP={{ network.ntp.pools | join(', ') }}
+{% endif %}

@@ -1,0 +1,66 @@
+- name: install nginx
+  package:
+    name: nginx
+    state: present
+
+- name: start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: create nginx systemd override folder
+  file:
+    path: /etc/systemd/system/nginx.service.d
+    state: directory
+
+- name: override nginx after in systemd
+  copy:
+    src: 10-nginx-online.conf
+    dest: /etc/systemd/system/nginx.service.d/10-nginx-online.conf
+  notify: restart nginx
+
+- name: install certbot
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - certbot
+    - python3-certbot-nginx
+
+- name: generate dhparams
+  community.crypto.openssl_dhparam:
+    path: /etc/ssl/dhparams.pem
+
+- name: get initial rtorrent certificate
+  command: "certbot certonly --agree-tos --email {{ rtorrent.email }} -n --server {{ rtorrent.acme_server }} --nginx -d {{ rtorrent.domain }}"
+  args:
+    creates: "/etc/letsencrypt/live/{{ rtorrent.domain }}/fullchain.pem"
+
+- name: install certbot service
+  template:
+    src: certbot.service.j2
+    dest: /etc/systemd/system/certbot.service
+
+- name: install certbot timer
+  template:
+    src: certbot.timer.j2
+    dest: /etc/systemd/system/certbot.timer
+
+- name: start certbot timer
+  systemd:
+    name: certbot.timer
+    state: started
+    enabled: yes
+
+- name: create root web directory
+  file:
+    path: /var/www
+    state: directory
+    owner: "{{ web_user[ansible_distribution] | default('nginx') }}"
+
+- name: install nginx configuration
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx

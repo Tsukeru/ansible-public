@@ -1,0 +1,7 @@
+powerdns:
+  master: yes
+  recursor: yes
+  versions:
+    authoritative: 4.6
+    recursor: 4.6
+    dnsdist: 1.7

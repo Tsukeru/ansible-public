@@ -1,0 +1,6 @@
+{% for service in consul.services %}
+service {
+	name = "{{ service.name }}"
+	port = {{ service.port }}
+}
+{% endfor %}

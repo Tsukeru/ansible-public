@@ -1,0 +1,63 @@
+---
+- name: install bind packages
+  package: 
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - bind
+    - bind-utils
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: import monitoring script
+  copy: src=bind-stats.py dest=/usr/local/bin/bind-stats.py mode=755
+
+- name: create log dir
+  file:
+    path: /var/log/named
+    owner: named
+    group: named
+    mode: '0755'
+    state: directory
+
+- name: configure bind
+  template:
+    src: "named.conf.j2"
+    dest: "/etc/named.conf"
+
+- name: bind configuration files
+  template: 
+    src: "{{ item }}.j2" 
+    dest: "/etc/named/{{ item }}"
+  with_items:
+    - default.conf
+    - acl.conf
+    - views.conf
+    - forwarded.conf
+    - internal.conf
+  notify: restart bind
+
+- name: start bind service
+  service: 
+    name: named 
+    state: started 
+    enabled: true
+
+- name: disable DNSSEC for forwarded domains
+  cron:
+    name: no-dnssec-{{ item.name }}
+    special_time: daily
+    job: "rndc nta -l 604800 {{ item.name }}"
+  with_items: "{{ bind.forwarded_zones }}"
+
+- name: install perl
+  package:
+    name: perl
+    state: present
+
+- name: install editzone script
+  copy:
+    src: editzone
+    dest: /usr/local/bin/editzone
+    mode: '0744'
+    owner: root
+    group: root

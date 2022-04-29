@@ -1,0 +1,55 @@
+- name: hashicorp repo apt key
+  apt_key:
+    url: https://apt.releases.hashicorp.com/gpg
+    state: present
+
+- name: setup consul repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    state: present
+    update_cache: true
+
+- name: install consul
+  package:
+    name: consul
+    state: latest
+  notify: restart consul
+
+- name: create consul data dir
+  file:
+    path: /var/consul
+    state: directory
+    owner: consul
+    group: consul
+
+- name: setup consul server
+  template:
+    src: server.hcl.j2
+    dest: /etc/consul.d/server.hcl
+    owner: consul
+    group: consul
+  when: consul.server is defined and consul.server
+  notify: restart consul
+
+- name: setup consul config
+  template:
+    src: consul.hcl.j2
+    dest: /etc/consul.d/consul.hcl
+    owner: consul
+    group: consul
+  notify: restart consul
+
+- name: setup consul services
+  template:
+    src: services.hcl.j2
+    dest: /etc/consul.d/services.hcl
+    owner: consul
+    group: consul
+  when: consul.services is defined
+  notify: restart consul
+
+- name: start consul
+  service:
+    name: consul
+    state: started
+    enabled: yes

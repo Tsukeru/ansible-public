@@ -1,0 +1,82 @@
+user {{ web_user[ansible_distribution] | default('nginx') }};
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+events {
+        worker_connections 1024;
+}
+
+http {
+        access_log /var/log/nginx/access.log combined;
+	error_log /var/log/nginx/error.log error;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+	client_max_body_size 64M;
+
+	proxy_busy_buffers_size 512k;
+	proxy_buffers 4 512k;
+	proxy_buffer_size 256k;
+
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+	server {
+		listen 80 default_server;
+		listen [::]:80 default_server;
+		server_name _;
+		return 301 https://$host$request_uri;
+	}
+
+	server {
+		listen 443 ssl;
+		listen [::]:443 ssl;
+		server_name _;
+
+		root /var/www;
+
+		ssl_certificate /etc/letsencrypt/live/{{ rtorrent.domain }}/fullchain.pem;
+		ssl_certificate_key /etc/letsencrypt/live/{{ rtorrent.domain }}/privkey.pem;
+		ssl_dhparam /etc/ssl/dhparams.pem;
+
+		location / {
+			{{ 'auth_request /auth;' if rtorrent.auth is defined }}
+			try_files $uri $uri/ /index.html;
+
+        	        location ~ \.php$ {
+	                        try_files $uri =404;
+                        	fastcgi_pass unix:{{ php.socket[ansible_distribution] | default('/run/php-fpm/www.sock') }};
+                	        fastcgi_index index.php;
+        	                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+	                        include fastcgi_params;
+
+        	                fastcgi_buffers 16 32k;
+	                        fastcgi_buffer_size 64k;
+                        	fastcgi_busy_buffers_size 64k;
+                	}
+		}
+
+		location /RPC2 {
+			include scgi_params;
+			scgi_pass unix:/var/run/rtorrent/rtorrent.sock;
+			{{ 'auth_request /auth;' if rtorrent.auth is defined }}
+		}
+
+{% if rtorrent.auth is defined %}
+		location = /auth {
+			internal;
+                        proxy_pass {{ rtorrent.auth }};
+                        proxy_pass_request_body off;
+                        proxy_set_header Content-Length "";
+                        proxy_set_header X-Original-URI $request_uri;
+{% if rtorrent.auth_group is defined %}
+			proxy_set_header X-LDAP-Group "{{ rtorrent.auth_group }}";
+{% endif %}
+                }
+{% endif %}
+	}
+}

@@ -1,0 +1,25 @@
+jobs:
+{% for job in zrepl.jobs %}
+  - name: {{ job.name }}
+    type: snap
+    filesystems: {
+      "<": true,
+{% for exception in job.exceptions %}
+      "{{ exception }}": false,
+{% endfor %}
+    }
+    snapshotting:
+      type: periodic
+      prefix: {{ job.prefix }}
+      interval: {{ job.interval }}
+    pruning:
+      keep:
+        - type: grid
+          regex: "^{{ job.prefix }}.*"
+{% if job.pruning.grid is defined %}
+          grid: {{ job.pruning.grid }}
+{% endif %}
+        - type: regex
+          negate: true
+          regex: "^{{ job.prefix }}.*"
+{% endfor %}

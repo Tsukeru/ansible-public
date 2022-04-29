@@ -1,0 +1,27 @@
+- name: setup caddy apt key
+  apt_key:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    state: present
+
+- name: setup caddy repository
+  apt_repository:
+    repo: "{{ item }} https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+    state: present
+  loop: ['deb', 'deb-src']
+
+- name: install caddy
+  package:
+    name: caddy
+    state: present
+
+- name: create Caddyfile
+  template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+  notify: restart caddy
+
+- name: start caddy
+  service:
+    name: caddy
+    state: started
+    enabled: yes

@@ -1,0 +1,95 @@
+- name: setup tranquilit key
+  apt_key:
+    url: http://samba.tranquil.it/tissamba-pubkey.gpg
+    state: present
+
+- name: setup tranquilit repo
+  apt_repository:
+    repo: "deb https://samba.tranquil.it/debian/samba-{{ samba.version }}/ {{ ansible_distribution_release }} main"
+    state: present
+
+- name: install samba
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - jq
+    - samba
+    - samba-client
+    - winbind
+    - libnss-winbind
+    - samba-common-bin
+    - samba-libs
+    - samba-vfs-modules
+    - krb5-user
+    - krb5-config
+    - python3-setuptools
+    - python3-pip
+    - python3-pexpect
+  notify: restart samba
+  
+- name: install packagekit
+  apt:
+    name: packagekit
+    state: present
+    default_release: bullseye-backports
+
+- name: setup samba conf
+  template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+  notify: restart samba
+
+- name: setup kerberos
+  template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+
+- name: check if machine is bound
+  command: "/usr/bin/net ads status -U {{ samba.user }}%{{ samba.password }}"
+  register: ads_status
+  changed_when: false
+  failed_when: ads_status.rc != 0 and ads_status.rc != 255
+
+- name: join ad domain
+  command: "/usr/bin/net ads join -U {{ samba.user }}%{{ samba.password }} createcomputer=\"{{ samba.ou }}\""
+  when: ads_status.rc == 255
+
+- name: setup nss for winbind
+  lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^{{ item }}:'
+    line: '{{ item }}: files winbind'
+  loop: ['passwd', 'group', 'shadow']
+
+- name: start samba
+  service:
+    name: smbd
+    state: started
+    enabled: yes
+
+- name: Start winbind
+  service:
+    name: winbind
+    enabled: yes
+    state: started
+
+- name: setup dnssd directory
+  file:
+    path: /etc/systemd/dnssd
+    state: directory
+
+- name: setup dnssd services
+  copy:
+    src: "{{ item }}.dnssd"
+    dest: "/etc/systemd/dnssd/{{ item }}.dnssd"
+  loop: ['samba', 'device-info']
+  notify: restart systemd-resolved
+
+- name: setup dnssd time machine services
+  template:
+    src: "timemachine.dnssd.j2"
+    dest: "/etc/systemd/dnssd/timemachine-{{ item.name }}.dnssd"
+  loop: "{{ samba.shares }}"
+  when: item.timemachine is defined and item.timemachine
+  notify: restart systemd-resolved

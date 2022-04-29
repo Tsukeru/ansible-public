@@ -1,0 +1,81 @@
+- name: install smokeping
+  package:
+    name: 
+      - smokeping
+      - fcgiwrap
+    state: present
+
+- name: install probe requirements
+  package:
+    name:
+      - dnsutils
+      - fping
+      - echoping
+      - msmtp
+    state: present
+
+- name: setup tcpping
+  get_url:
+    url: "http://www.vdberg.org/~richard/tcpping"
+    dest: /usr/bin/tcpping
+    mode: '0755'
+
+- name: create smokeping directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0777'
+    owner: smokeping
+    group: smokeping
+  loop:
+    - /etc/smokeping
+    - /var/lib/smokeping
+    - /var/cache/smokeping
+
+- name: deploy config
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/smokeping/{{ item }}"
+    owner: smokeping
+    group: smokeping
+  loop:
+    - config
+    - basepage.html
+    - pathnames
+    - Alerts
+    - Database
+    - General
+    - Presentation
+    - Probes
+    - Slaves
+    - Targets
+  notify: restart smokeping
+
+- name: deploy default config
+  copy:
+    remote_src: yes
+    src: "/etc/smokeping/{{ item }}.dist"
+    dest: "/etc/smokeping/{{ item }}"
+    owner: smokeping
+    group: smokeping
+  loop:
+    - smokemail
+    - tmail
+
+- name: deploy secrets
+  template:
+    src: "smokeping_secrets.j2"
+    dest: /etc/smokeping/smokeping_secrets
+    mode: '0700'
+    owner: smokeping
+    group: smokeping
+  notify: restart smokeping
+
+- name: start smokeping
+  service:
+    name:  "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - fcgiwrap.socket
+    - smokeping

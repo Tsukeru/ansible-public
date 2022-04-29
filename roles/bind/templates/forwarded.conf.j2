@@ -1,0 +1,11 @@
+{% for zone in bind.forwarded_zones %}
+zone "{{ zone.name }}" {
+        type forward;
+        forward only;
+        forwarders {
+{% for forwarder in zone.forwarders %}
+                {{ forwarder }};
+{% endfor %}
+        };
+};
+{% endfor %}

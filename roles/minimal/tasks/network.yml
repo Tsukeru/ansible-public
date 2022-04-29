@@ -1,0 +1,63 @@
+- name: remove ifupdown
+  package:
+    name: ifupdown
+    state: absent
+    purge: yes
+    autoremove: yes
+
+- name: devices configuration
+  template:
+    src: systemd_device.j2
+    dest: "/etc/systemd/network/{{ item.name }}.netdev"
+    owner: root
+    group: root
+    mode: 0644
+  loop: "{{ network.devices }}"
+  when: network.ansible_managed and network.devices is defined
+  notify: restart network
+
+- name: interfaces configuration
+  template:
+    src: systemd_network.j2
+    dest: "/etc/systemd/network/{{ item.name }}.network"
+    owner: root
+    group: root
+    mode: 0644
+  loop: "{{ network.interfaces | default([]) + bond_interfaces | default([]) }}"
+  when: network.ansible_managed
+  notify: restart network
+
+- name: stub resolvconf
+  file:
+    dest: /etc/resolv.conf
+    src: /run/systemd/resolve/stub-resolv.conf
+    force: yes
+    state: link
+
+- name: set dns servers
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^#?DNS='
+    line: "DNS={{ network.dns | join(' ') }}"
+  notify: restart systemd-resolved
+
+- name: set default domain
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^#?Domains='
+    line: "Domains={{ network.domain }}"
+  when: network.dns_force_domain is defined and network.dns_force_domain
+  notify: restart systemd-resolved
+
+- name: enable mdns
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^#?MulticastDNS='
+    line: 'MulticastDNS=yes'
+  notify: restart systemd-resolved
+
+- name: set systemd-resolved as resolver
+  lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^hosts\:'
+    line: 'hosts: files mymachines myhostname resolve [!UNAVAIL=return] dns'

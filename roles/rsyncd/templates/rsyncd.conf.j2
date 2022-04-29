@@ -1,0 +1,10 @@
+uid = 0
+gid = 0
+
+{% for share in rsync.shares %}
+[{{ share.name }}]
+	path = {{ share.path }}
+	read only = true
+	auth users = {{ rsync.user }}
+	secrets file = /etc/rsyncd.secrets
+{% endfor %}

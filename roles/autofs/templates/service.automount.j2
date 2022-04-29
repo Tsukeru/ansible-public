@@ -1,0 +1,8 @@
+[Unit]
+Description=AutoFS {{ item.name }}
+
+[Automount]
+Where={{ item.mountpoint }}
+
+[Install]
+WantedBy=multi-user.target

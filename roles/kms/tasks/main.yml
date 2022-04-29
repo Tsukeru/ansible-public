@@ -1,0 +1,17 @@
+---
+- name: Start vlmcsd container
+  docker_container:
+    name: vlmcsd
+    image: "mikolatero/vlmcsd"
+    restart_policy: unless-stopped
+    published_ports:
+      - "1688:1688"
+
+- name: Allow incoming connections to services
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: yes
+  with_items:
+    - "1688/tcp"

@@ -1,0 +1,7 @@
+keepalived:
+  interval: 1
+  state: BACKUP
+  interface: ens192
+  secret: secret
+  vip:
+    interface: ens192

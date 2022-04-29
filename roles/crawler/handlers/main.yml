@@ -1,0 +1,13 @@
+- name: restart es
+  service:
+    name: elasticsearch
+    state: restarted
+
+- name: restart fs2es-indexer
+  service:
+    name: fs2es-indexer
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

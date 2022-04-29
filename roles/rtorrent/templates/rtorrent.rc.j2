@@ -1,0 +1,32 @@
+# Directories
+directory.default.set = {{ rtorrent.directory }}
+session.path.set = /etc/rtorrent/session
+
+# Network
+throttle.max_uploads.global.set = 0
+throttle.max_downloads.global.set = 0
+throttle.global_down.max_rate.set_kb = 0
+throttle.global_up.max_rate.set_kb = 0
+network.port_range.set = {{ rtorrent.port }}-{{ rtorrent.port }}
+network.port_random.set = no
+trackers.use_udp.set = yes
+
+# Protocol settings
+{% if rtorrent.dht is defined and rtorrent.dht %}
+dht.mode.set = auto
+dht.port = {{ rtorrent.dht }}
+protocol.pex.set = yes
+{% endif %}
+protocol.encryption.set = allow_incoming,try_outgoing,enable_retry
+
+# Socket
+network.scgi.open_local = /var/run/rtorrent/rtorrent.sock
+execute.nothrow = chmod,777,/var/run/rtorrent/rtorrent.sock
+network.xmlrpc.size_limit.set = 2M
+
+# Encoding
+encoding.add = UTF-8
+
+# Logs
+log.open_file = "log", "/var/log/rtorrent.log"
+log.add_output = "info", "log"

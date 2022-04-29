@@ -1,0 +1,33 @@
+view internal {
+        match-clients { };
+        allow-recursion { any; };
+
+{% for zone in bind.internal_zones %}
+	zone "{{ zone }}" {
+{% if bind.role is not defined or bind.role == 'master' %}
+        	type master;
+	        notify yes;
+	        allow-transfer {
+{% for ns in groups.bind %}
+{% if hostvars[ns].bind.role is defined and hostvars[ns].bind.role == 'slave' %}
+	                {{ hostvars[ns].ansible_default_ipv4.address }};
+	                {{ hostvars[ns].ansible_default_ipv6.address }};
+{% endif %}
+{% endfor %}
+	        };
+{% else %}
+	        type slave;
+	        masters {
+{% for ns in groups.bind %}
+{% if hostvars[ns].bind.role is not defined or hostvars[ns].bind.role == 'master' %}
+	                {{ hostvars[ns].ansible_default_ipv4.address }};
+	                {{ hostvars[ns].ansible_default_ipv6.address }};
+{% endif %}
+{% endfor %}
+	        };
+{% endif %}
+		file "zone.{{ zone }}";
+                forwarders { };
+	};
+{% endfor %}
+};

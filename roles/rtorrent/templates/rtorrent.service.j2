@@ -1,0 +1,17 @@
+#!/bin/sh
+
+[Unit]
+Description=rTorrent
+After=network.target
+
+[Service]
+User=rtorrent
+Type=simple
+KillMode=process
+RuntimeDirectory=rtorrent
+ExecStart=/usr/bin/rtorrent -o system.daemon.set=true -o import=/etc/rtorrent/rtorrent.rc
+WorkingDirectory=/etc/rtorrent
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,18 @@
+[NetDev]
+Name={{ item.name }}
+{% if item.bond is defined %}
+Kind=bond
+
+[Bond]
+{% if item.bond.mode == 'active-backup' %}
+Mode=active-backup
+PrimaryReselectPolicy=always
+{% else %}
+Mode=802.3ad
+{% endif %}
+{% elif '.' in item.name %}
+Kind=vlan
+
+[VLAN]
+Id={{ item.name.split('.')[1] }}
+{% endif %}

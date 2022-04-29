@@ -1,0 +1,6 @@
+- name: remove cloud-init
+  apt:
+    name: cloud-init
+    state: absent
+    purge: yes
+    autoremove: yes

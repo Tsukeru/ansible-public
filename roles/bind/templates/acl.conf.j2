@@ -1,0 +1,20 @@
+{% if bind.views is defined %}
+{% for view in bind.views %}
+key "{{ view.name }}-key" {
+        algorithm hmac-md5;
+        secret "{{ view.key }}";
+};
+acl "{{ view.name }}" {
+        key {{ view.name }}-key;
+{% for viewkey in bind.views %}
+{% if view.name != viewkey.name %}
+        !key {{ viewkey.name }}-key;
+{% endif %}
+{% endfor %}
+{% for acl in view.acls %}
+        {{ acl }};
+{% endfor %}
+};
+
+{% endfor %}
+{% endif %}

@@ -1,0 +1,55 @@
+- name: install nginx
+  package:
+    name: nginx
+    state: latest
+
+- name: nginx configuration
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx
+
+- name: generate dhparams
+  community.crypto.openssl_dhparam:
+    path: /etc/ssl/dhparams.pem
+
+- name: remove default site
+  file:
+    path: "/etc/nginx/sites-{{ item }}/default"
+    state: absent
+  loop: [ 'available', 'enabled' ]
+  notify: restart nginx
+
+- name: nginx sites (http only)
+  template:
+    src: site.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.domain }}.conf"
+    force: no
+  vars:
+    no_ssl: yes
+  loop: "{{ nginx }}"
+  notify: restart nginx
+
+- name: start nginx
+  service:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: nginx sites
+  template:
+    src: site.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.domain }}.conf"
+  loop: "{{ nginx }}"
+  notify: restart nginx
+
+- name: enable sites
+  file:
+    src: "/etc/nginx/sites-available/{{ item.domain }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item.domain }}.conf"
+    state: link
+  loop: "{{ nginx }}"
+  notify: restart nginx

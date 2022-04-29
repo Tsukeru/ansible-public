@@ -1,0 +1,147 @@
+#!/usr/bin/perl -w
+
+use strict;
+use File::Compare;
+use POSIX qw/strftime/;
+use Term::ReadKey;              # non standard perl module
+
+
+my (@diffoutput, @nchkz, %OLDENV, %bin, $tmpfile, $user, $serial, $zone, $zonefile);
+
+
+my $pzd         = "/var/named";          # Primary zones directory
+my $tmpdir      = "/tmp";                               # Temporary directory
+my $ndcreload   = "/usr/sbin/rndc";     # command to reload named
+my $path        = "/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin"; # $PATH
+my $vimopts     = "+set filetype=bindzone";
+
+sub usage {
+        print STDERR "Usage: $0 <domain>\n";
+        exit(1);
+}
+sub findbinpath {
+        my $pgm = shift(@_);
+        foreach my $path (split(/:/, $ENV{'PATH'})) { return "$path/$pgm" if (-x "$path/$pgm"); }
+        derr("Error: Can't find $pgm in PATH\n");
+}
+sub err {
+        printf(STDERR "Error: %s\n", shift(@_));
+}
+sub derr {
+        printf(STDERR "Fatal error: %s\n", shift(@_));
+        exit(1);
+}
+sub getserial {
+        my ($p, $zf, $serial);
+        $zf = shift(@_);
+        open(DZ, "<$zf") or derr("open: $zf: $!\n");
+        while (my $line = <DZ>) {
+                for (my $i = 0; $i < length($line); $i++) {
+                        my $c = substr($line, $i, 1);
+                        $p = 1 if ($c eq "(");
+                        $serial .= $c if ($p and $c =~ /^\d$/);
+                        if ($serial and $c =~ /^\s$/) {
+                                close(DZ);
+                                if ($serial !~ /^\d{10}$/) {
+                                        err("$zone\'s serial number length isn't 10 digits, fixing it..");
+                                        $serial = strftime("%Y%m%d00", localtime(time()));
+                                }
+                                return $serial;
+                        }
+                }
+        }
+}
+sub updateserial {
+        my (@buf, $zf, $so, $sn, $p);
+        ($zf, $so) = @_;
+        #$sn = $so + 1;
+        if (substr($so, 0, 8) eq strftime("%Y%m%d", localtime(time()))) {
+                $sn = $so + 1;
+        } else {
+                $sn = strftime("%Y%m%d00", localtime(time()));
+        }
+        open(DZ, "+<$zf") or derr("open: $zf: $!\n");
+        while (my $line = <DZ>) {
+                $p = 1 if ($line =~ /\(/);
+                $line =~ s/$so/$sn/ if (defined $p);
+                $p = 0 if ($line =~ /\)/);
+                push(@buf, $line);
+        }
+        seek(DZ, 0, 0);
+        print DZ foreach (@buf);
+        close(DZ);
+}
+sub safe_exec {
+        my $pid = open(KID, "-|");
+        if ($pid) {
+                my @ret = <KID>;
+                close KID or err("safe_exec: $_[0] returned exit code $?");
+                return @ret;
+        } else {
+                exec(@_) or derr("exec(): $_[0]: $!");
+        }
+}
+sub copy {
+        system($bin{'cp'}, @_);
+}
+sub basename {
+        my @split = split(/\//, shift());
+        return $split[$#split];
+}
+
+
+usage() unless (defined $ARGV[0]);
+
+if ($ARGV[1]) {
+        $zonefile = "$pzd/zone.$ARGV[0]-$ARGV[1]";
+} else {
+        $zonefile = "$pzd/zone.$ARGV[0]";
+}
+
+if (-f "$zonefile") {
+        $zone = $ARGV[0];
+} else {
+        derr("DNS zone \"$ARGV[0]\" doesn't exists.");
+}
+
+$user = (defined $ENV{'SUDO_USER'} ? $ENV{'SUDO_USER'} : $ENV{'USER'});
+%OLDENV = %ENV;
+%ENV = (
+        "USER" => $user, "EDITOR" => findbinpath("rvim"), "PATH" => $path, "HOME" => scalar((getpwnam($user))[7]), "TERM" => $ENV{'TERM'},
+);
+$bin{$_}        = findbinpath($_) foreach ('diff', 'named-checkzone', 'clear', 'cp');
+$serial         = getserial($zonefile);
+$tmpfile        = "$tmpdir/editzone.$$";
+
+
+START:
+copy($zonefile, $tmpfile);
+RETRY:
+system($ENV{'EDITOR'}, $vimopts, $tmpfile);
+derr("$ENV{'EDITOR'} returned error code $?.") if ($? != 0);
+derr("No changes in $zone.") if (compare($zonefile, $tmpfile) == 0);
+updateserial($tmpfile, $serial) if ($serial eq getserial($tmpfile));
+@diffoutput = safe_exec($bin{'diff'}, "-u", $zonefile, $tmpfile) or derr("diff error $?");
+
+system($bin{'clear'});
+print foreach (@diffoutput);
+
+print "\nAre you happy with these differences ? ([yes]/no) ";
+goto START if (<STDIN> !~ /^(yes)?$/i);
+
+@nchkz = safe_exec($bin{'named-checkzone'}, $zone, $tmpfile);
+if ($? != 0) {
+        print "\nSyntax error:\n";
+        print foreach (@nchkz);
+        print "\nType ENTER to continue..";
+        ReadLine(0);
+        goto RETRY;
+}
+
+copy($tmpfile, $zonefile);
+print "Zone \"$zone\" sucessfully modified.\n";
+#system("$ndcreload reload $zone");
+system("$ndcreload reload");
+print "Zone \"$zone\" sucessfully reloaded.\n";
+
+%ENV = %OLDENV;

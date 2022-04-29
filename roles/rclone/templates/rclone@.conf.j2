@@ -1,0 +1,7 @@
+[Service]
+Environment=REMOTE={{ item.remote }}
+Environment=MOUNTPOINT={{ item.mountpoint }}
+{% if item.write is defined and not item.write %}
+Environment='ADDITIONAL_OPT=--read-only'
+{% endif %}
+

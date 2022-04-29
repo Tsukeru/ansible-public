@@ -1,0 +1,26 @@
+[Unit]
+Description=Rclone %I
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/rclone mount "${REMOTE}" ${MOUNTPOINT} \
+--config /etc/rclone/rclone.conf \
+--allow-other \
+--buffer-size 256M \
+--drive-chunk-size 32M \
+--fast-list \
+--log-level INFO \
+--log-file /var/log/rclone/mounts/%i.log \
+--timeout 1h \
+--umask 000 \
+--vfs-cache-mode writes \
+--vfs-read-chunk-size 128M \
+--vfs-read-chunk-size-limit off \
+$ADDITIONAL_OPT
+ExecStop=/bin/fusermount -uz $MOUNTPOINT
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

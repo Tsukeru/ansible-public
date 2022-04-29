@@ -1,0 +1,23 @@
+data_dir = "/var/consul"
+{% if consul.server is not defined or not consul.server %}
+{% if consul.join_server is defined %}
+retry_join = ["{{ consul.join_server }}"]
+{% else %}
+retry_join = ["consul.service.consul"]
+{% endif %}
+{% endif %}
+datacenter = "{{ consul.datacenter }}"
+client_addr = "::1 127.0.0.1"
+{% raw %}
+advertise_addr_ipv4 = "{{ GetDefaultInterfaces | include \"type\" \"IPv4\" | include \"flags\" \"up\" | attr \"address\" }}"
+{% endraw %}
+{% if ansible_default_ipv6.interface is defined %}
+{% raw %}
+advertise_addr_ipv6 = "{{ GetDefaultInterfaces | include \"type\" \"IPv6\" | include \"flags\" \"up\" | attr \"address\" }}"
+bind_addr = "[::]"
+{% endraw %}
+{% else %}
+{% raw %}
+bind_addr = "{{ GetDefaultInterfaces | include \"type\" \"IPv4\" | include \"flags\" \"up\" | attr \"address\" }}"
+{% endraw %}
+{% endif %}

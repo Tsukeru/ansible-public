@@ -1,0 +1,29 @@
+- name: setup grafana repo
+  yum_repository:
+    name: grafana
+    description: grafana
+    baseurl: https://packages.grafana.com/oss/rpm
+    gpgcheck: yes
+    gpgkey: [ 'https://packages.grafana.com/gpg.key' ]
+    repo_gpgcheck: yes
+    sslverify: yes
+    enabled: yes
+
+- name: install grafana
+  package:
+    name: grafana
+    state: present
+
+- name: start grafana
+  service:
+    name: grafana-server
+    state: started
+    enabled: yes
+
+- name: setup bind to localhost
+  ini_file:
+    path: /etc/grafana/grafana.ini
+    section: server
+    option: http_addr
+    value: "[::1]"
+  notify: restart grafana

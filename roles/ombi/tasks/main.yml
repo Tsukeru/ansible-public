@@ -1,0 +1,62 @@
+- name: install libicu
+  package:
+    name: libicu
+    state: present
+
+- name: download ombi
+  get_url:
+    url: "https://github.com/Ombi-app/Ombi/releases/download/v{{ ombi.version }}/linux-x64.tar.gz"
+    dest: /tmp/ombi.tar.gz
+
+- name: create ombi user
+  user:
+    name: ombi
+    system: yes
+    create_home: no
+    shell: /usr/bin/false
+    state: present
+
+- name: create ombi directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: ombi
+    group: ombi
+    mode: '0755'
+  loop:
+    - /opt/ombi
+    - /etc/ombi
+
+- name: extract ombi
+  unarchive:
+    src: /tmp/ombi.tar.gz
+    dest: /opt/ombi
+    owner: ombi
+    group: ombi
+    remote_src: yes
+  notify: restart ombi
+
+- name: setup ombi service
+  template:
+    src: ombi.service.j2
+    dest: /etc/systemd/system/ombi.service
+  notify: reload systemd
+
+- name: start ombi
+  service:
+    name: ombi
+    state: started
+    enabled: yes
+
+- name: download ombi updater
+  get_url:
+    url: https://raw.githubusercontent.com/carnivorouz/updateOmbi/main/updateOmbi.sh
+    dest: /opt/updateOmbi.sh
+    mode: '0755'
+
+- name: setup updater cron
+  cron:
+    name: ombi update
+    minute: 0
+    hour: 4
+    job: /opt/updateOmbi.sh

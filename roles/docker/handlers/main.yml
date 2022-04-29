@@ -1,0 +1,14 @@
+- name: restart docker
+  service:
+    name: docker
+    state: restarted
+
+- name: restart docker socket
+  service:
+    name: docker.socket
+    state: restarted
+
+- name: restart zabbix-agent
+  service:
+    name: zabbix-agent2
+    state: restarted

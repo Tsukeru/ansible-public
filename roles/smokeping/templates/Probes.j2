@@ -1,0 +1,20 @@
+*** Probes ***
+{% for probe in smokeping.probes %}
++ {{ probe.name }}
+{% for key, value in probe.items() | list %}
+{% if key not in ('name', 'childs') %}
+{{ key }} = {{ value }}
+{% endif %}
+{% endfor %}
+{% if probe.childs is defined %}
+{% for child in probe.childs %}
+++ {{ child.name }}
+{% for key, value in child.items() | list %}
+{% if key not in ('name') %}
+{{ key }} = {{ value }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+

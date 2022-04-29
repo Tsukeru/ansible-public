@@ -1,0 +1,21 @@
+- name: create dnsrobocert path
+  file:
+    name: /data/certs/dnsrobocert/
+    state: directory
+
+- name: install dnsrobocert conf
+  template:
+    src: dnsrobocert.yml.j2
+    dest: /data/certs/dnsrobocert/config.yml
+  notify: restart dnsrobocert
+
+- name: certificates container
+  docker_container:
+    name: certs
+    image: adferrand/dnsrobocert:latest
+    env:
+      TZ: Europe/Paris
+    volumes:
+      - /data/certs/letsencrypt:/etc/letsencrypt
+      - /data/certs/dnsrobocert:/etc/dnsrobocert
+    restart_policy: always

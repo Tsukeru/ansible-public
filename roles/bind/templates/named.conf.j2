@@ -1,0 +1,39 @@
+options {
+	directory "/var/named";
+
+	listen-on { 0.0.0.0/0; ::/0; };
+
+	allow-query { any; };
+	allow-recursion { any; };
+
+	recursion yes;
+	forwarders {
+{% for forwarder in bind.forwarders %}
+		{{ forwarder }};
+{% endfor %}
+        };
+
+	dnssec-enable yes;
+        dnssec-validation auto;
+
+	max-cache-ttl 60;
+        max-ncache-ttl 60;
+};
+
+logging {
+        channel single_log {
+                file "/var/log/named/named.log" versions 3 size 10m;
+                severity info;
+                print-time yes;
+                print-severity yes;
+                print-category yes;
+        };
+        category default {
+                single_log;
+        };
+};
+
+include "/etc/named/acl.conf";
+include "/etc/named/internal.conf";
+include "/etc/named/views.conf";
+include "/etc/named/default.conf";

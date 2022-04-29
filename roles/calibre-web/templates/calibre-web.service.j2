@@ -1,0 +1,11 @@
+[Unit]
+Description=Calibre-Web
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/cps
+Environment=CALIBRE_DBPATH=/var/calibre-web
+
+[Install]
+WantedBy=multi-user.target

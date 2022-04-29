@@ -1,0 +1,8 @@
+ui_config {
+	enabled = true
+}
+bootstrap_expect = 1
+server = true
+{% if consul.join_wan is defined %}
+retry_join_wan = [ "{{ consul.join_wan | join('\", \"') }}" ]
+{% endif %}

@@ -1,0 +1,11 @@
+[Unit]
+Description=MergerFS %I
+
+[Service]
+Type=forking
+ExecStart=/bin/mergerfs -o async_read=false,use_ino,allow_other,auto_cache,func.getattr=newest,category.action=all,category.create=ff ${SOURCE_FOLDERS} ${MOUNTPOINT}
+ExecStop=/bin/fusermount -uz ${MOUNTPOINT}
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,47 @@
+- name: install step-cli
+  apt:
+    deb: https://dl.step.sm/gh-release/cli/gh-release-header/v{{ step_ca.cli_version }}/step-cli_{{ step_ca.cli_version }}_amd64.deb
+    state: present
+
+- name: install step-ca
+  apt:
+    deb: https://dl.step.sm/gh-release/certificates/gh-release-header/v{{ step_ca.cli_version }}/step-ca_{{ step_ca.cli_version }}_amd64.deb
+    state: present
+  when: not step_ca.yubikey
+
+- name: install step-ca with yubikey
+  include: yubikey.yml
+  when: step_ca.yubikey
+
+- name: create step user
+  user:
+    name: step
+    state: present
+    shell: /usr/sbin/nologin
+    system: yes
+    home: /etc/step-ca
+    create_home: no
+
+- name: create step directories
+  file:
+    path: "/etc/step-ca/{{ item }}"
+    state: directory
+    owner: step
+    group: step
+  loop: [ "templates", "db" ]
+
+- name: install templates
+  copy:
+    src: "{{ item }}.tpl"
+    dest: "/etc/step-ca/templates/{{ item }}.tpl"
+  loop:
+    - intermediate
+    - leaf
+
+- name: setup systemd service
+  copy:
+    src: step-ca.service
+    dest: /etc/systemd/system/step-ca.service
+  notify:
+    - reload systemd
+    - restart step-ca 

@@ -1,0 +1,12 @@
+# Servers
+{% for ntp in network.ntp.pools %}
+server {{ ntp }} iburst
+{% endfor %}
+
+# ACL
+restrict default nomodify notrap nopeer
+restrict 127.0.0.1
+restrict ::1
+
+# Driftfile
+driftfile /var/lib/ntp/ntp.drift

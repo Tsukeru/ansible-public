@@ -1,0 +1,59 @@
+- name: install pip
+  package:
+    name: python3-pip
+    state: present
+
+- name: install netifaces
+  pip:
+    name: netifaces
+    state: present
+
+- name: download multicast-relay
+  get_url:
+    url: "{{ mdns.relay.package }}"
+    dest: /tmp/multicast-relay.tar.gz
+
+- name: create multicast-relay directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - /etc/multicast-relay
+    - /opt/multicast-relay
+    - /etc/systemd/system/multicast-relay.service.d
+
+- name: extract multicast-relay
+  unarchive:
+    src: /tmp/multicast-relay.tar.gz
+    dest: /opt/multicast-relay
+    remote_src: yes
+    extra_opts: [ "--strip-components=1" ]
+  notify: restart multicast-relay
+
+- name: generate multicast-relay filter
+  template:
+    src: ifFilter.json.j2
+    dest: /etc/multicast-relay/ifFilter.json
+  notify: restart multicast-relay
+
+- name: setup multicast-relay service
+  template:
+    src: multicast-relay.service.j2
+    dest: /etc/systemd/system/multicast-relay.service
+  notify:
+    - reload systemd
+    - restart multicast-relay
+
+- name: setup multicast-relay interfaces service override
+  template:
+    src: interfaces.conf.j2
+    dest: /etc/systemd/system/multicast-relay.service.d/interfaces.conf
+  notify:
+    - reload systemd
+    - restart multicast-relay
+
+- name: start multicast-relay
+  service:
+    name: multicast-relay
+    state: started
+    enabled: yes

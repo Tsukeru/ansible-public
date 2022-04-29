@@ -1,0 +1,43 @@
+- name: install libicu
+  package:
+    name: icu
+    state: present
+
+- name: install libmediainfo
+  package:
+    name: ['tinyxml', 'libmediainfo']
+    state: present
+
+- name: download radarr
+  get_url:
+    url: 'https://radarr.servarr.com/v1/update/nightly/updatefile?os=linux&runtime=netcore&arch=x64'
+    dest: /tmp/radarr.tar.gz
+
+- name: extract radarr
+  unarchive:
+    src: /tmp/radarr.tar.gz
+    dest: /opt
+    remote_src: yes
+
+- name: create radarr configuration folder
+  file:
+    path: /etc/radarr
+    state: directory
+
+- name: install systemd service
+  template:
+    src: radarr.service.j2
+    dest: /etc/systemd/system/radarr.service
+  notify:
+    - reload systemd
+    - restart radarr
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: start radarr
+  service:
+    name: radarr
+    state: started
+    enabled: yes
+

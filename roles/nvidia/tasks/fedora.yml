@@ -1,0 +1,22 @@
+- name: install rpm fusion repositories
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_distribution_major_version }}.noarch.rpm"
+    - "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_distribution_major_version }}.noarch.rpm"
+
+- name: install akmod-nvidia
+  yum:
+    name: akmod-nvidia
+    state: latest
+  notify: reboot
+
+- name: install vaapi/cuda libs
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - libva-vdpau-driver
+    - libva-utils
+    - xorg-x11-drv-nvidia-cuda

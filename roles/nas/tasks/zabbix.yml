@@ -1,0 +1,15 @@
+- name: Create directories if needed
+  file:
+    path: "/etc/zabbix/scripts"
+    state: directory
+
+- name: install smartmontools
+  package:
+    name: smartmontools
+    state: present
+
+- name: Zabbix scripts
+  copy:
+    src: zfs.py
+    dest: /etc/zabbix/scripts/zfs.py
+    mode: 0755

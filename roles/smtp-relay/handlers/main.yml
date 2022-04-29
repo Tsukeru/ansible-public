@@ -1,0 +1,23 @@
+- name: update postfix conf
+  command: "postmap {{ item }}"
+  loop:
+    - /etc/postfix/smarthost_passwd
+    - /etc/postfix/master.cf
+    - /etc/postfix/main.cf
+  listen: restart postfix
+
+- name: update sni map
+  command: "postmap -F /etc/postfix/vmail_ssl.map"
+  when: smtp.tls is defined
+  listen: restart postfix
+
+- name: update sender_relay conf
+  command: "postmap /etc/postix/sender_relay"
+  when: smtp.relays is defined
+  listen: restart postfix
+
+- name: restart postfix service
+  service:
+    name: postfix
+    state: restarted
+  listen: restart postfix

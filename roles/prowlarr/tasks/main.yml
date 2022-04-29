@@ -1,0 +1,37 @@
+- name: install libicu
+  package:
+    name: libicu-dev
+    state: present
+
+- name: download prowlarr
+  get_url:
+    url: "http://prowlarr.servarr.com/v1/update/develop/updatefile?os=linux&runtime=netcore&arch=x64"
+    dest: /tmp/prowlarr.tar.gz
+
+- name: extract prowlarr
+  unarchive:
+    src: /tmp/prowlarr.tar.gz
+    dest: /opt
+    remote_src: yes
+
+- name: create prowlarr configuration folder
+  file:
+    path: /etc/prowlarr
+    state: directory
+
+- name: setup prowlarr service
+  template:
+    src: prowlarr.service.j2
+    dest: /etc/systemd/system/prowlarr.service
+  notify:
+    - reload systemd
+    - restart prowlarr
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: start prowlarr
+  service:
+    name: prowlarr
+    state: started
+    enabled: yes

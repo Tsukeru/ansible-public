@@ -1,0 +1,73 @@
+{% if caddy.options is defined %}
+{
+{% for option, value in caddy.options.items() %}
+	{{ option }} {{ value }}
+{% endfor %}
+}
+
+{% endif %}
+{% if caddy.sites is defined %}
+{% set caddy_sites = caddy.sites %}
+{% else %}
+{% set caddy_sites = caddy %}
+{% endif %}
+{% for site in caddy_sites %}
+{{ site.domain }} {
+	log {
+		output file /var/log/caddy/{{ site.domain | replace(':', 'global-') | split(',') | first }} {
+			roll_size 3MiB
+			roll_keep 5
+			roll_keep_for 48h
+		}
+		format console
+	}
+
+{% if site.tls is defined and site.tls %}
+	tls {
+		on_demand
+{% if site.acme is defined and site.acme != 'letsencrypt' %}
+		ca {{ site.acme }}
+{% elif site.acme is defined and site.acme == 'letsencrypt' %}
+		issuer acme {
+                        disable_http_challenge
+                }
+{% elif site.zerossl is defined and site.zerossl %}
+		issuer zerossl {{ site.zerossl }}
+{% endif %}
+{% if site.tls.client_ca is defined %}
+		client_auth {
+			mode require_and_verify
+			trusted_ca_cert_file {{ site.tls.client_ca }}
+		}
+{% endif %}
+	}
+{% endif %}
+{% if site.handles is defined %}
+{% for handle in site.handles %}
+	handle_path {{ handle.url }} {
+		root * {{ handle.path }}
+		file_server
+	}
+{% endfor %}
+{% endif %}
+
+	handle {
+{% if site.backend is defined %}
+		reverse_proxy {{ site.backend }}
+{% elif site.php_fpm is defined %}
+		php_fastcgi {{ site.php_fpm }}
+{% elif site.fcgi is defined %}
+		reverse_proxy unix//var/run/fcgiwrap.sock {
+			transport fastcgi {
+				env SCRIPT_FILENAME {{ site.fcgi }}
+				split ""
+			}
+		}
+{% endif %}
+{% if site.root is defined %}
+		root * {{ site.root }}
+		file_server
+{% endif %}
+	}
+}
+{% endfor %}

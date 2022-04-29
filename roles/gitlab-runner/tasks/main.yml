@@ -1,0 +1,36 @@
+- name: install gitlab-runner
+  package:
+    name: gitlab-runner
+    state: latest
+
+- name: install python-gitlab
+  package:
+    name: python-gitlab
+    state: present
+
+- name: check gitlab-runner status
+  command: gitlab-runner list
+  changed_when: no
+  ignore_errors: yes
+  check_mode: no
+  register: configured_runners
+
+- name: register runner
+  command: >
+    gitlab-runner register
+    --non-interactive
+    --url "{{ gitlab.url }}"
+    --registration-token "{{ gitlab.runner.token }}"
+    --name "{{ inventory_hostname }}.{{ zabbix.category }}"
+    --tag-list "{{ gitlab.runner.tags | default([]) | join(',') }}"
+    --locked="{{ gitlab.runner.locked | default(false) }}"
+    --executor {{ gitlab.runner.executor | default('docker') }}
+    --docker-image alpine
+  when: configured_runners.stderr.find(inventory_hostname + '.' + zabbix.category) == -1
+
+- name: set concurrent jobs for gitlab-runner
+  lineinfile:
+    path: /etc/gitlab-runner/config.toml
+    regexp: '^concurrent ='
+    line: "concurrent = {{ gitlab.runner.concurrent | default (2) }}"
+  notify: restart gitlab-runner

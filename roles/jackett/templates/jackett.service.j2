@@ -1,0 +1,17 @@
+[Unit]
+Description=Jackett Daemon
+After=network.target
+
+[Service]
+Environment=XDG_CONFIG_HOME=/etc/jackett/
+WorkingDirectory=/opt/Jackett/
+User=jackett
+ExecStart=/bin/sh /opt/Jackett/jackett_launcher.sh
+Restart=always
+RestartSec=5
+Type=simple
+TimeoutStopSec=30
+SyslogIdentifier=jackett
+
+[Install]
+WantedBy=multi-user.target

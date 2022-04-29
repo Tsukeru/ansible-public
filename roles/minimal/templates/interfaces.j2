@@ -1,0 +1,41 @@
+source /etc/network/interfaces.d/*
+
+auto lo
+iface lo inet loopback
+
+{% for interface in network_interfaces %}
+auto {{ interface.name }}
+allow-hotplug {{ interface.name }}
+{% if interface.ip is defined and interface.ip %}
+{% if interface.ip is defined and interface.ip == 'dhcp' %}
+iface {{ interface.name }} inet dhcp
+{% else %}
+iface {{ interface.name }} inet static
+	address {{ interface.ip.address | ipaddr('address') }}/{{ interface.ip.address | ipaddr('prefix') }}
+{% if interface.ip.gateway is defined %}
+	gateway {{ interface.ip.gateway }}
+{% endif %}
+{% endif %}
+{% if interface.mtu is defined %}
+	pre-up /usr/sbin/ip link set $IFACE mtu {{ interface.mtu }}
+{% endif %}
+{% for route in interface.routes | default([]) %}
+{% if route[0] | ipv4 %}
+	up /usr/sbin/ip route add {{ route[0] }} via {{ route[1] }} dev {{ interface.name }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if interface.ipv6 == 'autoconf' %}
+iface {{ interface.name }} inet6 auto
+{% endif %}
+{% if interface.mtu is defined %}
+        pre-up /usr/sbin/ip link set $IFACE mtu {{ interface.mtu }}
+{% endif %}
+{% for route in interface.routes | default([]) %}
+{% if route[0] | ipv6 %}
+        up /usr/sbin/ip -6 route add {{ route[0] }} via {{ route[1] }} dev {{ interface.name }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}

@@ -1,0 +1,39 @@
+---
+- name: install nfs packages
+  package:
+    name: nfs-common
+    state: present
+  when:  ansible_os_family == 'Debian'
+
+- name: Install mount services
+  template:
+    src: "service.mount.j2"
+    dest: "/etc/systemd/system/{{ item.mountpoint.replace('/', '', 1).replace('/', '-') }}.mount"
+    owner: root
+    group: root
+    mode: 0755
+  with_items: "{{ shares }}"
+  notify: "systemd reload"
+
+- name: Install automount services
+  template:
+    src: "service.automount.j2"
+    dest: "/etc/systemd/system/{{ item.mountpoint.replace('/', '', 1).replace('/', '-') }}.automount"    
+    owner: root
+    group: root
+    mode: 0755
+  with_items: "{{ shares }}"
+  notify: "systemd reload"
+
+- name: Create mount directories
+  file:
+    path: "{{ item.mountpoint }}"
+    state: directory
+  loop: "{{ shares }}"
+
+- name: Start automount services
+  service:
+    name: "{{ item.mountpoint.replace('/', '', 1).replace('/', '-') }}.automount"
+    state: started
+    enabled: yes
+  with_items: "{{ shares }}"

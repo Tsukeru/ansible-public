@@ -1,0 +1,42 @@
+- name: install java
+  package:
+    name: jre-openjdk
+    state: present
+
+- name: create user
+  user:
+    name: komga
+    shell: /bin/nologin
+    home: /var/lib/komga
+    system: yes
+
+- name: download komga
+  get_url:
+    url: "https://github.com/gotson/komga/releases/download/v{{ komga.version }}/komga-{{ komga.version }}.jar"
+    dest: /opt/komga.jar
+    owner: komga
+    group: komga
+    mode: '0755'
+  notify: restart komga
+
+- name: setup komga conf
+  template:
+    src: komga.env
+    dest: /etc/komga.conf
+    owner: komga
+    group: komga
+  notify: restart komga
+
+- name: setup komga service
+  copy:
+    src: komga.service
+    dest: /etc/systemd/system/komga.service
+  notify:
+    - reload systemd
+    - restart komga
+
+- name: start komga
+  service:
+    name: komga
+    state: started
+    enabled: yes

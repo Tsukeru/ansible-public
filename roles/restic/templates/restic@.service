@@ -1,0 +1,16 @@
+[Unit]
+Description=Restic Backup for %I
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/restic backup --exclude "${RESTIC_EXCLUDE}" -v %I
+Environment="RESTIC_CACHE_DIR=/var/cache/restic"
+Environment=AWS_ACCESS_KEY_ID={{ restic.repository.ak }}
+Environment=AWS_SECRET_ACCESS_KEY={{ restic.repository.sk }}
+Environment=RESTIC_REPOSITORY={{ restic.repository.url }}
+Environment=RESTIC_PASSWORD={{ restic.repository.key }}
+
+[Install]
+WantedBy=default.target

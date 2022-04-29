@@ -1,0 +1,12 @@
+directories:
+{% for dir in crawler.directories %}
+  - {{ dir }}
+{% endfor %}
+
+elasticsearch:
+  url: {{ crawler.elasticsearch }}
+  index: files
+  bulk_size: 10000
+
+wait_time: "{{ crawler.wait_time | default ('30m') }}"
+mapping: "/etc/fs2es-indexer/mapping.json"

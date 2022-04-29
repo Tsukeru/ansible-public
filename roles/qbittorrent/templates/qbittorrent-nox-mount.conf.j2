@@ -1,0 +1,3 @@
+[Unit]
+After={{ qbittorrent.directory.replace('/', '', 1).replace('/', '-') }}.mount
+BindsTo={{ qbittorrent.directory.replace('/', '', 1).replace('/', '-') }}.mount

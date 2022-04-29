@@ -1,0 +1,88 @@
+[connection]
+id={{ item.name }}
+interface-name={{ item.name }}
+{% if item.master is defined %}
+slave-type=bond
+master={{ item.master }}
+{% elif item.bond is defined and item.bond %}
+type=bond
+{% elif '.' in item.name %}
+type=vlan
+{% else %}
+type=ethernet
+{% endif %}
+{% if item.mdns is not defined or item.mdns == 'resolve' %}
+mdns=1
+{% elif item.mdns %}
+mdns=2
+{% else %}
+mdns=0
+{% endif %}
+
+[ethernet]
+mtu={{ item.mtu | default('1500') }}
+
+{% if item.bond is defined %}
+[bond]
+{% if item.bond.mode is defined %}
+mode={{ item.bond.mode }}
+{% if item.bond.primary is defined %}
+primary={{ item.bond.primary }}
+{% endif %}
+{% else %}
+mode=802.3ad
+{% endif %}
+{% elif '.' in item.name %}
+[vlan]
+id={{ item.name.split('.')[1] }}
+parent={{ item.name.split('.')[0] }}
+{% endif %}
+
+[ipv4]
+{% if item.ip is not defined or not item.ip or item.master is defined %}
+method=disabled
+{% elif item.ip is defined and item.ip == 'link-local' %}
+method=link-local
+{% elif item.ip is defined and item.ip == 'dhcp' %}
+method=auto
+{% else %}
+method=manual
+address1={{ item.ip.address }}
+{% endif %}
+{% for route in item.routes | default([]) if route[0] | ipv4 %}
+route{{ loop.index }}={{ route[0] }},{{ route[1] }}
+{% endfor %}
+{% if item.defroute is defined and item.defroute %}
+{% if item.ip.gateway is defined %}
+gateway={{ item.ip.gateway }}
+{% endif %}
+dns={% for dns in network.dns if dns | ipv4 %}{{ dns }};{% endfor %}
+
+never-default=false
+{% else %}
+never-default=true
+{% endif %}
+
+[ipv6]
+{% if item.ipv6 is not defined or not item.ipv6 or item.master is defined %}
+method=ignore
+{% elif item.ipv6 == 'autoconf' %}
+method=auto
+{% else %}
+method=manual
+address1={{ item.ipv6.address }}
+{% endif %}
+{% for route in item.routes | default([]) if route[0] | ipv6 %}
+route{{ loop.index }}={{ route[0] }},{{ route[1] }}
+{% endfor %}
+{% if item.defroute is defined and item.defroute %}
+{% if item.ipv6.gateway is defined %}
+gateway={{ item.ipv6.gateway }}
+{% endif %}
+dns={% for dns in network.dns if dns | ipv6 %}{{ dns }};{% endfor %}
+
+never-default=false
+{% else %}
+never-default=true
+{% endif %}
+

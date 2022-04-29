@@ -1,0 +1,22 @@
+- name: setup powerdns repo
+  apt_repository:
+    filename: powerdns_rec
+    repo: "deb [arch=amd64] http://repo.powerdns.com/debian {{ ansible_distribution_release }}-rec-{{ powerdns.versions.authoritative | replace('.', '') }} main"
+    state: present
+
+- name: install pdns-recursor
+  package:
+    name: pdns-recursor
+    state: latest
+
+- name: setup recursor conf
+  template:
+    src: recursor.conf.j2
+    dest: /etc/powerdns/recursor.conf
+  notify: restart pdns-recursor
+
+- name: start pdns-recursor
+  service:
+    name: pdns-recursor
+    state: started
+    enabled: yes

@@ -1,0 +1,53 @@
+- name: setup debian multimedia keyring
+  apt:
+    deb: https://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/deb-multimedia-keyring_2016.8.1_all.deb
+    state: present
+
+- name: setup multimedia apt repo
+  apt_repository:
+    repo: "{{ item }}"
+    state: present
+  loop:
+    - "deb https://www.deb-multimedia.org {{ ansible_distribution_release }} main non-free"
+    - "deb https://www.deb-multimedia.org {{ ansible_distribution_release }}-backports main"
+
+- name: install ffmpeg
+  apt:
+    name: ffmpeg
+    state: latest
+    default_release: "{{ ansible_distribution_release }}-backports"
+
+- name: install jellyfin apt key
+  apt_key:
+    url: https://repo.jellyfin.org/debian/jellyfin_team.gpg.key
+    state: present
+
+- name: setup jellyfin repository
+  apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}] https://repo.jellyfin.org/debian {{ ansible_distribution_release }} main"
+    state: present
+
+- name: install jellyfin
+  package:
+    name: jellyfin
+    state: present
+
+- name: start jellyfin
+  service:
+    name: jellyfin
+    state: started
+    enabled: yes
+
+- name: setup systemd override for jellyfin
+  file:
+    path: /etc/systemd/system/jellyfin.service.d
+    state: directory
+
+- name: setup user for jellyfin
+  copy:
+    src: 10-user.conf
+    dest: /etc/systemd/system/jellyfin.service.d/10-user.conf
+  notify:
+    - reload systemd
+    - restart jellyfin
+

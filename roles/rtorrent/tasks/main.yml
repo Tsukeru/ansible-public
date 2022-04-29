@@ -1,0 +1,5 @@
+- name: install rtorrent
+  include: rtorrent.yml
+
+- name: install rutorrent
+  include: rutorrent.yml

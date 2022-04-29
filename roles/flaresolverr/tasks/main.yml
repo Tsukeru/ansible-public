@@ -1,0 +1,62 @@
+- name: install unzip
+  package:
+    name: unzip
+    state: present
+
+- name: install browser
+  package:
+    name: 
+      - firefox-esr
+      - libasound2
+    state: present
+
+- name: download flaresolverr
+  get_url:
+    url: "https://github.com/FlareSolverr/FlareSolverr/releases/download/v{{ flaresolverr.version }}/flaresolverr-v{{ flaresolverr.version }}-linux-x64.zip"
+    dest: /tmp/flaresolverr.zip
+
+- name: create flaresolverr user
+  user:
+    name: flaresolverr
+    system: yes
+    create_home: yes
+    home: /var/lib/flaresolverr
+    shell: /bin/false
+    state: present
+
+- name: extract flaresolverr
+  unarchive:
+    src: /tmp/flaresolverr.zip
+    dest: /opt
+    owner: flaresolverr
+    group: flaresolverr
+    remote_src: yes
+  notify: restart flaresolverr
+
+- name: install flaresolverr service
+  copy:
+    src: /opt/flaresolverr/flaresolverr.service
+    dest: /etc/systemd/system/flaresolverr.service
+    owner: root
+    group: root
+    remote_src: yes
+  notify: restart flaresolverr
+
+- name: flaresolverr service override folder
+  file:
+    path: /etc/systemd/system/flaresolverr.service.d
+    state: directory
+
+- name: create flaresolverr service override
+  template:
+    src: 10-env.conf.j2
+    dest: /etc/systemd/system/flaresolverr.service.d/10-env.conf
+  notify: 
+    - reload systemd
+    - restart flaresolverr
+
+- name: start flaresolverr
+  service:
+    name: flaresolverr
+    state: started
+    enabled: yes

@@ -1,0 +1,87 @@
+- name: install git
+  package:
+    name: git
+    state: present
+
+- name: install dependencies
+  package:
+    name:
+      - bash-completion 
+      - fping 
+      - imagemagick 
+      - mtr 
+      - snmp 
+      - nmap 
+      - python3 
+      - python3-pymysql 
+      - python3-redis 
+      - python3-memcache
+      - python3-pip 
+      - python3-systemd 
+      - python3-dotenv
+      - rrdtool 
+      - unzip
+    state: present
+
+- name: install python command_runner
+  pip: 
+    name: command_runner
+    state: latest
+
+- name: download librenms
+  git:
+    repo: https://github.com/librenms/librenms.git
+    dest: /opt/librenms
+    update: no
+
+- name: create librenms user
+  user:
+    name: librenms
+    system: yes
+    shell: /bin/bash
+    home: /opt/librenms
+
+- name: set librenms as owner
+  file:
+    path: /opt/librenms
+    state: directory
+    recurse: yes
+    owner: librenms
+    group: librenms
+
+- name: set librenms acl
+  ansible.posix.acl:
+    path: "{{ item }}"
+    etype: group
+    permissions: rwx
+    state: present
+    default: yes
+    recursive: yes
+  loop:
+    - /opt/librenms/rrd
+    - /opt/librenms/logs
+    - /opt/librenms/bootstrap/cache/
+    - /opt/librenms/storage/
+
+- name: install dependencies
+  command: 
+    cmd: /opt/librenms/scripts/composer_wrapper.php install --no-dev
+    chdir: /opt/librenms
+    creates: /opt/librenms/vendor/
+  become_user: librenms
+
+- name: set librenms symlink
+  file:
+    path: /usr/bin/lnms
+    src: /opt/librenms/lnms
+    state: link
+
+- name: librenms completion, cron and logrotate settings
+  copy:
+    src: "{{ item[0] }}"
+    dest: "{{ item[1] }}"
+    remote_src: yes
+  loop:
+    - ['/opt/librenms/misc/lnms-completion.bash', '/etc/bash_completion.d/']
+    - ['/opt/librenms/misc/librenms.logrotate', '/etc/logrotate.d/librenms']
+    - ['/opt/librenms/librenms.nonroot.cron', '/etc/cron.d/librenms']

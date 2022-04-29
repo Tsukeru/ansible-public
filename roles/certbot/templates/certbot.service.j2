@@ -1,0 +1,26 @@
+[Unit]
+Description=ACME certificate for %I
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot certonly \
+--non-interactive \
+--agree-tos \
+--rsa-key-size 4096 \
+{% if acme.powerdns is defined and acme.powerdns %}
+--authenticator certbot-dns-powerdns:dns-powerdns \
+--certbot-dns-powerdns:dns-powerdns-credentials /etc/ssl/acme/pdns-credentials.ini \
+{% else %}
+{% if 'nginx' in group_names %}
+--webroot \
+--webroot-path /var/www/acme \
+{% else %}
+--standalone \
+{% endif %}
+{% endif %}
+{% if acme.server is defined and acme.server %}
+--server {{ acme.server }} \
+{% endif %}
+-m {{ acme.email }} \
+-d %I
+ExecStartPost=/usr/bin/openssl pkcs12 -export -inkey /etc/letsencrypt/live/%I/privkey.pem -in /etc/letsencrypt/live/%I/fullchain.pem -out /etc/ssl/acme/%I.pfx -passout pass:

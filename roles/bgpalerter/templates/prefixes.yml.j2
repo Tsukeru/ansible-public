@@ -1,0 +1,24 @@
+{% for as in bgpalerter.monitor %}
+{% for prefix in as.prefixes %}
+{{ prefix }}:
+  description: {{ as.name }}
+  asn:
+    - {{ as.as }}
+  ignoreMorespecifics: false
+  ignore: false
+  group: noc
+  
+{% endfor %}
+{% endfor %}
+
+options:
+  monitorASns:
+{% for as in bgpalerter.monitor %}
+    '{{ as.as }}':
+      group: noc
+      upstreams:
+{% for upstream in as.upstreams %}
+        - {{ upstream }}
+{% endfor %}
+      downstreams: []
+{% endfor %}

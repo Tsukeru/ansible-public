@@ -1,0 +1,62 @@
+- name: setup zabbix repository
+  apt:
+    deb: "{{ zabbix_repo }}"
+    state: present
+
+- name: install zabbix-agent2
+  package:
+    name: zabbix-agent2
+    state: latest
+    update_cache: yes
+
+- name: start zabbix-agent2
+  service:
+    name: zabbix-agent2
+    state: started
+    enabled: yes
+
+- name: set zabbix settings
+  lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: "^(# )?{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+  loop:
+    - ['Hostname', "{{ inventory_hostname }}.{{ zabbix.category }}"]
+    - ['HostMetadata', "{{ zabbix.metadata }}"]
+    - ['HostInterface', "{{ ansible_host }}"]
+    - ['UnsafeUserParameters', "{{ zabbix.unsafe_parameters | int }}"]
+    - ['Timeout', "{{ zabbix.timeout }}"]
+  notify: restart zabbix
+
+- name: set zabbix server
+  lineinfile:
+    path: /etc/zabbix/zabbix_agent2.conf
+    regexp: "^(# )?{{ item }}="
+    line: "{{ item }}={{ zabbix.server | join(',') }}"
+  loop:
+    - Server
+    - ServerActive
+  notify: restart zabbix
+
+- name: install userparameters
+  copy:
+    src: "userparameter_{{ item }}.conf"
+    dest: /etc/zabbix/zabbix_agent2.d/userparameter_{{ item }}.conf
+  loop: "{{ zabbix.userparameters }}"
+  notify: restart zabbix
+
+- name: create zabbix systemd override directory
+  file:
+    name: /etc/systemd/system/zabbix-agent2.service.d
+    state: directory
+
+- name: override zabbix-agent user to root
+  copy:
+    dest: /etc/systemd/system/zabbix-agent2.service.d/10-user.conf
+    content: |
+      [Service]
+      User=root
+  notify:
+    - reload systemd
+    - restart zabbix-agent
+  when: zabbix.root_mode

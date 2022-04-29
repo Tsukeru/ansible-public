@@ -1,0 +1,8 @@
+- name: restart hyperglass
+  service:
+    name: hyperglass
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

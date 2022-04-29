@@ -1,0 +1,32 @@
+- name: install openjre
+  package:
+    name: jdk11-openjdk
+    state: present
+
+- name: create hath service override dir
+  file:
+    path: /etc/systemd/system/hath.service.d/
+    state: directory
+
+- name: hath service override
+  template:
+    src: 10-download-dir.conf.j2
+    dest: /etc/systemd/system/hath.service.d/10-download-dir.conf
+  notify: 
+    - reload systemd
+    - restart hath
+
+- name: set hath keys
+  copy:
+    content: "{{ hath.client_id }}-{{ hath.client_key }}"
+    dest: /var/lib/hath/data/client_login
+    owner: hath
+    group: hath
+  notify: restart hath
+
+- name: start hath
+  service:
+    name: hath
+    enabled: yes
+    state: started
+

@@ -1,0 +1,5 @@
+{% for relay in smtp.relays %}
+{% for domain in relay.domains %}
+@{{ domain }} {{ relay.relay }}
+{% endfor %}
+{% endfor %}

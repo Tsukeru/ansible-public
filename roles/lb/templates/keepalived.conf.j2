@@ -1,0 +1,33 @@
+globals_defs {
+}
+
+vrrp_script chk_haproxy {
+	script '/usr/bin/killall -0 haproxy'
+	interval {{ keepalived.interval }}
+}
+
+vrrp_instance VI_1 {
+	virtual_router_id {{ keepalived.router_id }}
+	state {{ keepalived.state }}
+	advert_int {{ keepalived.interval }}
+	interface {{ keepalived.interface }}
+	priority {{ keepalived.priority }}
+
+	authentication {
+		auth_type PASS
+		auth_pass {{ keepalived.secret }}
+	}
+
+	virtual_ipaddress {
+		{{ keepalived.vip.ip | default() }}
+	}
+{% if keepalived.vip.ipv6 is defined %}
+	virtual_ipaddress_excluded {
+		{{ keepalived.vip.ipv6 | default() }}
+	}
+{% endif %}
+
+	track_script {
+		chk_haproxy
+	}
+}

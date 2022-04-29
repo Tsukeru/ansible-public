@@ -1,0 +1,6 @@
+zabbix:
+  version: 6.0
+
+zabbix_repo:
+  rhel: "https://repo.zabbix.com/zabbix/{{ zabbix.version }}/rhel/{{ ansible_distribution_major_version }}/x86_64/zabbix-release-{{ zabbix.version }}-1.el{{ ansible_distribution_major_version }}.noarch.rpm"
+  debian: "https://repo.zabbix.com/zabbix/{{ zabbix.version }}/debian/pool/main/z/zabbix-release/zabbix-release_{{ zabbix.version }}-1+debian{{ ansible_distribution_major_version }}_all.deb"

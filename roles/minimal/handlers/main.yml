@@ -1,0 +1,48 @@
+# NETWORK
+- name: restart systemd-networkd
+  service:
+    name: systemd-networkd
+    state: restarted
+  listen: restart network
+
+- name: restart systemd-resolved
+  service:
+    name: systemd-resolved
+    state: restarted
+
+# TIME
+- name: restart chrony
+  service:
+    name: chronyd
+    state: restarted
+
+- name: restart ntp
+  service:
+    name: ntp
+    state: restarted
+
+- name: restart systemd-timesyncd
+  service:
+    name: systemd-timesyncd
+    state: restarted
+
+# CA
+- name: update trusted ca (redhat/arch)
+  command: /bin/update-ca-trust
+  when: ansible_os_family == "RedHat" or ansible_os_family == 'Archlinux'
+  listen: update trusted ca
+
+- name: update trusted ca (debian)
+  command: /usr/sbin/update-ca-certificates
+  when: ansible_os_family == "Debian"
+  listen: update trusted ca
+
+# SSH
+- name: restart sshd
+  service:
+    name: sshd
+    state: restarted
+
+# GRUB
+- name: rebuild grub conf
+  command: update-grub

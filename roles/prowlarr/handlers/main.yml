@@ -1,0 +1,8 @@
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart prowlarr
+  service:
+    name: prowlarr
+    state: restarted

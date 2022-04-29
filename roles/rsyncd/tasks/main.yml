@@ -1,0 +1,25 @@
+---
+- name: install rsyncd
+  package:
+    name: rsync-daemon
+    state: present
+
+- name: setup credentials file
+  lineinfile:
+    path: /etc/rsyncd.secrets
+    owner: root
+    group: root
+    mode: '0600'
+    line: "{{ rsync.user }}:{{ rsync.password }}"
+    create: yes
+
+- name: setup config file
+  template:
+    src: rsyncd.conf.j2
+    dest: /etc/rsyncd.conf
+
+- name: start rsyncd service
+  service:
+    name: rsyncd
+    state: started
+    enabled: yes

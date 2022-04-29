@@ -1,0 +1,16 @@
+[Unit]
+Description=Rclone Job %I
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=bash -c "/usr/bin/rclone ${RCLONE_ACTION} ${RCLONE_SOURCE} ${RCLONE_DEST} \
+--config /etc/rclone/rclone.conf \
+--check-first \
+--log-level INFO \
+--log-file /var/log/rclone/jobs/%i.log \
+${ADDITIONAL_OPT}"
+
+[Install]
+WantedBy=default.target

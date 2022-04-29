@@ -1,0 +1,5 @@
+domain {{ network.domain }}
+
+{% for dns in network.dns %}
+nameserver {{ dns }}
+{% endfor %}

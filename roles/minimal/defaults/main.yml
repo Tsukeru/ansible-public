@@ -1,0 +1,7 @@
+network:
+  domain: "{{ ansible_host.split('.', 1)[1] }}"
+  ansible_managed: yes
+
+debian:
+  repositories:
+    testing: no

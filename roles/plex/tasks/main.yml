@@ -1,0 +1,60 @@
+- name: setup plex apt key
+  apt_key:
+    url: https://downloads.plex.tv/plex-keys/PlexSign.key
+    state: present
+
+- name: setup plex repository
+  apt_repository:
+    repo: deb https://downloads.plex.tv/repo/deb public main
+    state: present
+
+- name: install plex
+  package:
+    name: plexmediaserver
+    state: present
+
+- name: install requirements
+  package:
+    name: git
+    state: present
+
+- name: install plexupdate
+  git:
+    repo: https://github.com/mrworf/plexupdate.git
+    dest: /opt/plexupdate
+
+- name: configure plexupdate
+  template:
+    src: plexupdate.conf.j2
+    dest: /etc/plexupdate.conf
+
+- name: plexupdate cron configuration
+  copy:
+    src: plexupdate.cron.conf
+    dest: /etc/plexupdate.cron.conf
+
+- name: install plexupdate cron
+  file:
+    src: /opt/plexupdate/extras/cronwrapper
+    dest: /etc/cron.daily/plexupdate
+    state: link
+
+- name: setup systemd override for plex
+  file:
+    path: /etc/systemd/system/plexmediaserver.service.d
+    state: directory
+
+- name: setup user for plex
+  copy:
+    src: 10-user.conf
+    dest: /etc/systemd/system/plexmediaserver.service.d/10-user.conf
+  notify: 
+    - reload systemd
+    - restart plex
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: install plex agents
+  include: plex-agents.yml
+

@@ -1,0 +1,43 @@
+- name: install mono
+  package:
+    name: mono
+    state: present
+
+- name: install libmediainfo
+  package:
+    name: ['tinyxml', 'libmediainfo']
+    state: present
+
+- name: download sonarr
+  get_url:
+    url: 'https://services.sonarr.tv/v1/download/main/latest?version=3&os=linux'
+    dest: /tmp/sonarr.tar.gz
+
+- name: extract sonarr
+  unarchive:
+    src: /tmp/sonarr.tar.gz
+    dest: /opt
+    remote_src: yes
+
+- name: create sonarr configuration folder
+  file:
+    path: /etc/sonarr
+    state: directory
+
+- name: install systemd service
+  template:
+    src: sonarr.service.j2
+    dest: /etc/systemd/system/sonarr.service
+  notify: 
+    - reload systemd
+    - restart sonarr
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: start sonarr
+  service:
+    name: sonarr
+    state: started
+    enabled: yes
+

@@ -1,0 +1,59 @@
+- name: install libicu
+  package:
+    name: libicu
+    state: present
+
+- name: download jackett
+  get_url:
+    url: "{{ jackett.binary }}"
+    dest: /tmp/jackett.tar.gz
+
+- name: create jackett user
+  user:
+    name: jackett
+    system: yes
+    create_home: no
+    shell: /usr/bin/false
+    state: present
+
+- name: extract jackett
+  unarchive:
+    src: /tmp/jackett.tar.gz
+    dest: /opt
+    owner: jackett
+    group: jackett
+    remote_src: yes
+
+- name: set folder rights
+  file:
+    path: /opt/Jackett
+    owner: jackett
+    group: jackett
+    mode: '0755'
+    recurse: yes
+
+- name: create jackett conf folder
+  file:
+    path: /etc/jackett
+    state: directory
+    owner: jackett
+    group: jackett
+
+- name: install jackett service
+  template:
+    src: jackett.service.j2
+    dest: /etc/systemd/system/jackett.service
+  notify: restart jackett
+
+- name: start jackett
+  service:
+    name: jackett
+    state: started
+    enabled: yes
+
+- name: jackett listens on localhost
+  lineinfile:
+    path: /etc/jackett/Jackett/ServerConfig.json
+    regexp: '^  "AllowExternal":'
+    line: '  "AllowExternal": false,'
+  notify: restart jackett

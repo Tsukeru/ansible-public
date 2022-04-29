@@ -1,0 +1,32 @@
+- name: install kernel headers
+  package:
+    name: linux-headers-amd64
+    state: present
+    default_release: bullseye-backports
+
+- name: install zfs
+  package:
+    name: 
+      - zfs-dkms
+      - zfsutils-linux
+    state: latest
+    default_release: bullseye-backports
+  notify: reboot
+
+- name: set zfs arc size
+  lineinfile:
+    create: yes
+    path: /etc/modprobe.d/zfs.conf
+    regexp: '^options zfs zfs_arc_max='
+    line: 'options zfs zfs_arc_max={{ zfs.arc_size | human_to_bytes }}'
+  notify: reboot
+
+- name: enable automount services
+  service:
+    name: "{{ item }}"
+    enabled: yes
+  loop:
+    - zfs-import-cache.service
+    - zfs-mount.service
+    - zfs-import.target
+    - zfs.target

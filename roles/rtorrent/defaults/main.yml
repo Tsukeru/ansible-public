@@ -1,0 +1,32 @@
+web_user:
+  Ubuntu: www-data
+
+php:
+  conf_path:
+    Ubuntu: /etc/php/7.4/fpm
+  conf_override_path:
+    Ubuntu: /etc/php/7.4/fpm/conf.d
+  socket:
+    Ubuntu: /run/php/php-fpm.sock
+
+rtorrent:
+  domain: "{{ inventory_hostname }}.{{ host_domain }}"
+  acme_server: https://acme-v02.api.letsencrypt.org/directory
+
+  rutorrent:
+    download: https://github.com/Novik/ruTorrent/archive/v3.10.tar.gz
+    php: 7.4
+    php_max_mem: 1G
+    disable_plugins:
+      - _cloudflare
+      - ipad
+      - extsearch
+      - feeds
+      - rss
+      - rssurlrewrite
+      - screenshots
+      - mediainfo
+      - spectrogram
+      - unpack
+      - rutracker_check
+      - geoip

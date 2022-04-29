@@ -1,0 +1,85 @@
+- name: install postfix
+  package:
+    name:
+      - postfix
+      - libsasl2-modules
+    state: present
+
+- name: setup relays
+  template:
+    src: sender_relay.j2
+    dest: /etc/postfix/sender_relay
+  when: smtp.relays is defined
+  notify: restart postfix
+
+- name: setup sender dependant relay
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^sender_dependent_relayhost_maps( )?='
+    line: 'sender_dependent_relayhost_maps = hash:/etc/postfix/sender_relay'
+  when: smtp.relays is defined
+  notify: restart postfix
+
+- name: setup relayhost
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^relayhost( )?='
+    line: 'relayhost = [{{ smtp.default_relay.host }}]:{{ smtp.default_relay.port }}'
+  when: smtp.default_relay is defined
+  notify: restart postfix
+  
+- name: setup smtp servers credentials
+  template:
+    src: smarthost_passwd.j2
+    dest: /etc/postfix/smarthost_passwd
+  notify: restart postfix
+
+- name: setup tls certificates
+  template:
+    src: vmail_ssl.map.j2
+    dest: /etc/postfix/vmail_ssl.map
+  when: smtp.tls is defined
+  notify: restart postfix
+
+- name: setup postfix configuration
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: "^{{ item[0] }}( )?="
+    line: "{{ item[0] }} = {{ item[1] }}"
+  loop:
+    - [ "smtp_use_tls", "yes" ]
+    - [ "smtp_tls_security_level", "encrypt" ]
+    - [ "smtp_sasl_auth_enable", "yes" ]
+    - [ "smtp_sasl_password_maps", "hash:/etc/postfix/smarthost_passwd" ]
+    - [ "smtp_sasl_security_options", "noanonymous" ]
+    - [ "smtp_sender_dependent_authentication", "yes" ]
+    - [ "inet_interfaces", "all" ]
+    - [ "mydomain", "{{ smtp.domain }}" ]
+    - [ "mynetworks", "{{ smtp.allowed_networks | join(', ') }}" ]
+  notify: restart postfix
+
+- name: setup postfix ssl
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: "^{{ item[0] }}( )?="
+    line: "{{ item[0] }} = {{ item[1] }}"
+  loop:
+    - [ "tls_server_sni_maps", "hash:/etc/postfix/vmail_ssl.map" ]
+    - [ "smtpd_tls_chain_files", "{{ smtp.tls[0].key }} {{ smtp.tls[0].cert }}" ]
+  when: smtp.tls is defined
+  notify: restart postfix
+
+- name: enable starttls on postfix
+  replace:
+    path: /etc/postfix/master.cf
+    regexp: '^#({{ item }}.*)'
+    replace: '\1'
+  when: smtp.tls is defined
+  loop: ['submission', 'smtps']
+  notify: restart postfix
+
+- name: start postfix
+  service:
+    name: postfix
+    state: started
+    enabled: yes

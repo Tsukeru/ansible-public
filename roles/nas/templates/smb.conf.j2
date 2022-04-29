@@ -1,0 +1,69 @@
+[global]
+{% if samba.interfaces is defined %}
+        bind interfaces only = yes
+        interfaces = {% for interface in samba.interfaces %}{{ interface }} {% endfor %}
+
+{% endif %}
+        multicast dns register = no
+        workgroup = {{ samba.netbios }}
+        security = ads
+        passdb backend = tdbsam
+        kerberos method = system keytab
+        template homedir = /home/%U@%D
+        template shell = /bin/bash
+        realm = {{ samba.domain|upper }}
+        idmap config {{ samba.netbios }} : range = 2000000-2999999
+        idmap config {{ samba.netbios }} : backend = rid
+        idmap config * : range = 10000-999999
+        idmap config * : backend = tdb
+        winbind refresh tickets = yes
+        winbind offline logon = yes
+        vfs objects = catia fruit acl_xattr streams_xattr shadow_copy2
+        shadow:snapdir = .zfs/snapshot
+        shadow:sort = desc
+        shadow:format = auto_%Y%m%d_%H%M%S_000
+	shadow:localtime = no
+        map acl inherit = yes
+        store dos attributes = yes
+        veto files = /._*/.DS_Store/
+        delete veto files = yes
+        min protocol = SMB2
+	server multi channel support = no
+	access based share enum = yes
+        fruit:metadata = netatalk
+        fruit:resource = xattr
+        fruit:wipe_intentionally_left_blank_rfork = yes
+        fruit:delete_empty_adfiles = yes
+	spotlight = yes
+{% if samba.elasticsearch is not defined %}
+	spotlight backend = tracker
+{% else %}
+	spotlight backend = elasticsearch
+	elasticsearch:index = {{ samba.elasticsearch.index | default('files') }}
+	elasticsearch:address = {{ samba.elasticsearch.host }}
+	elasticsearch:port = {{ samba.elasticsearch.port | default('9200') }}
+{% endif %}
+
+{% if samba.shares is defined %}
+{% for share in samba.shares %}
+[{{ share.name }}]
+        path = {{ share.path }}
+        read only = no
+{% if share.timemachine is defined and share.timemachine %}
+        fruit:time machine = yes
+{% if share.timemachine.quota is defined %}
+        fruit:time machine max size = {{ share.timemachine.quota }}
+{% endif %}
+        force create mode = 0600
+        force directory mode = 0700
+{% elif share.public is defined and share.public %}
+        writable = yes
+        guest ok = yes
+        guest only = yes
+        force user = nobody
+        create mode = 0777
+        directory mode = 0777
+{% endif %}
+
+{% endfor %}
+{% endif %}

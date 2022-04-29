@@ -1,0 +1,9 @@
+- name: install nvidia driver
+  apt:
+    name:
+      - linux-headers-amd64
+      - nvidia-driver
+      - firmware-misc-nonfree
+    default_release: "{{ ansible_distribution_release }}-backports"
+    state: latest
+  notify: reboot

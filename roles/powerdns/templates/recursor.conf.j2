@@ -1,0 +1,22 @@
+dnssec=process-no-validate
+allow-from=::1, 127.0.0.1
+local-address=[::1]:5301, 127.0.0.1:5301
+{% if ansible_default_ipv6.interface is defined %}
+query-local-address=::, 0.0.0.0
+{% endif %}
+
+forward-zones-recurse = .={{ powerdns.upstreams | join(';') }}
+{% if powerdns.recurse_zones is defined %}
+{% for zone in powerdns.recurse_zones %}
+forward-zones-recurse += {{ zone.name }}={{ zone.server | join(';') }}
+{% endfor %}
+{% endif %}
+
+{% if powerdns.recurse_authoritative_zones is defined %}
+{% for zone in powerdns.recurse_authoritative_zones %}
+forward-zones {{ '+' if loop.index > 1 }}= {{ zone.name }}={{ zone.server | join(';') }}
+{% endfor %}
+{% endif %}
+
+dont-query=127.0.0.0/8
+max-negative-ttl=60

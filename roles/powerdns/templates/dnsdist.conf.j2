@@ -1,0 +1,21 @@
+setLocal("{{ ansible_default_ipv4.address }}")
+setACL("0.0.0.0/0")
+{% if ansible_default_ipv6.interface is defined %}
+addLocal("{{ ansible_default_ipv6.address }}")
+addACL("::/0")
+{% endif %}
+
+newServer({ address="[::1]:5301", pool="recursor" })
+newServer({ address="[::1]:5300", pool="authoritative", useClientSubnet=true })
+
+addAction(AllRule(), SetECSPrefixLengthAction(32, 128))
+addAction(OrRule({
+        QTypeRule(DNSQType.SOA),
+        QTypeRule(DNSQType.AXFR),
+        QTypeRule(DNSQType.IXFR),
+        OpcodeRule(DNSOpcode.Notify),
+        OpcodeRule(DNSOpcode.Update)
+}), PoolAction('authoritative'))
+
+addAction(RDRule(), PoolAction("recursor"))
+addAction(AllRule(), PoolAction("authoritative"))

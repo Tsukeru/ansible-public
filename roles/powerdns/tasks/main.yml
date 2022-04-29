@@ -1,0 +1,15 @@
+- name: setup powerdns apt key
+  apt_key:
+    url: https://repo.powerdns.com/FD380FBB-pub.asc
+    state: present
+
+- name: setup powerdns
+  include: powerdns.yml
+
+- name: setup recursor
+  include: recursor.yml
+  when: powerdns.recursor
+
+- name: setup dnsdist
+  include: dnsdist.yml
+  when: powerdns.recursor

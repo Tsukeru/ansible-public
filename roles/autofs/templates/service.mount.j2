@@ -1,0 +1,19 @@
+[Unit]
+Description=AutoFS {{ item.name }}
+Requires=network-online.target
+After=network-online.service
+
+[Mount]
+What={{ item.name }}
+Where={{ item.mountpoint }}
+{% if item.type == 'cifs' %}
+Options=_netdev,username={{ item.username }},password={{ item.password }},domain={{ item.domain }}{% if item.local_user is defined %},uid={{ item.local_user }}{% endif %}{% if item.local_group is defined %},gid={{ item.local_group }}{% endif %},nounix,rw,noperm{% if item.file_mode is defined %},file_mode={{ item.file_mode }}{% endif %}{% if item.dir_mode is defined %},dir_mode={{ item.dir_mode }}{% endif %}
+
+Type=cifs
+{% elif item.type == 'nfs' or item.type == 'nfs4' %}
+Options=_netdev,nolock,soft,{% if item.ro is defined and item.ro %}ro{% else %}rw{% endif %}{% if item.proto is defined %},proto={{ item.proto }}{% endif %} 
+Type={{ item.type }}
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

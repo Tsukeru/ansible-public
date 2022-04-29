@@ -1,0 +1,43 @@
+{% for zone in bind.internal_zones %}
+zone "{{ zone }}" {
+{% if bind.role is not defined or bind.role == 'master' %}
+        type master;
+        file "zone.{{ zone }}";
+	forwarders { };
+	notify yes;
+	allow-transfer {
+{% for ns in groups.bind %}
+{% if hostvars[ns].bind.role is defined and hostvars[ns].bind.role == 'slave' %}
+		{{ hostvars[ns].ansible_default_ipv4.address }};
+		{{ hostvars[ns].ansible_default_ipv6.address }};
+{% endif %}
+{% endfor %}
+	};
+{% else %}
+	type slave;
+	forwarders { };
+	masters {
+{% for ns in groups.bind %}
+{% if hostvars[ns].bind.role is not defined or hostvars[ns].bind.role == 'master' %}
+		{{ hostvars[ns].ansible_default_ipv4.address }};
+                {{ hostvars[ns].ansible_default_ipv6.address }};
+{% endif %}
+{% endfor %}
+        };
+{% endif %}
+};
+{% endfor %}
+
+{% for zone in bind.forwarded_zones %}
+zone "{{ zone.name }}" {
+        type forward;
+        forward only;
+        forwarders {
+{% for forwarder in zone.forwarders %}
+                {{ forwarder }};
+{% endfor %}
+        };
+};
+{% endfor %}
+
+include "/etc/named.rfc1912.zones";

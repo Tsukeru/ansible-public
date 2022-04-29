@@ -1,0 +1,10 @@
+- name: install policycoreutils-python
+  package:
+    name: policycoreutils-python
+    state: present
+  when: ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'
+
+- name: disable selinux
+  selinux:
+    state: disabled
+    policy: targeted

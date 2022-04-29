@@ -1,0 +1,11 @@
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart step-ca
+  service:
+    name: step-ca
+    state: restarted
+
+- name: reload udev rules
+  command: udevadm control --reload-rules

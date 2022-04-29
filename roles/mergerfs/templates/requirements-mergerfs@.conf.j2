@@ -1,0 +1,5 @@
+[Unit]
+{% for requirement in item.requirements %}
+After={{ requirement }}
+BindsTo={{ requirement }}
+{% endfor %}

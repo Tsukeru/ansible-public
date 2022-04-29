@@ -1,0 +1,96 @@
+# DEVICE
+NAME={{ item.name }}
+DEVICE={{ item.name }}
+{% if '.' in item.name %}
+VLAN=yes
+PHYSDEV={{ item.name.split('.')[0] }}
+VLAN_ID={{ item.name.split('.')[1] }}
+{% elif item.master is defined %}
+TYPE=Ethernet
+MASTER={{ item.master }}
+SLAVE=yes
+{% elif item.bond is defined %}
+BONDING_MASTER=yes
+ONPARENT=yes
+{% if item.bond.mode is defined and item.bond.mode == 'active-backup' %}
+BONDING_OPTS="mode={{ item.bond.mode }} primary={{ item.bond.primary }}"
+{% else %}
+BONDING_OPTS="mode=4"
+{% endif %}
+{% endif %}
+MTU={{ item.mtu | default('1500') }}
+ONBOOT=yes
+{% if item.mdns is defined and item.mdns %}
+MDNS=yes
+{% elif item.mdns is defined and not item.mdns %}
+MDNS=no
+{% else %}
+MDNS=yes
+{% endif %}
+
+# IPv4
+{% if item.ip is not defined or not item.ip or item.master is defined %}
+BOOTPROTO=none
+DEFROUTE=no
+{% elif item.ip is defined and item.ip == 'link-local' %}
+BOOTPROTO=autoip
+DEFROUTE=no
+{% elif item.ip is defined and item.ip == 'dhcp' %}
+BOOTPROTO=dhcp
+{% if item.defroute is defined and item.defroute %}
+DEFROUTE=yes
+{% else %}
+DEFROUTE=no
+{% endif %}
+{% else %}
+BOOTPROTO=static
+IPADDR={{ item.ip.address | ipaddr('address') }}
+NETMASK={{ item.ip.address | ipaddr('netmask') }}
+{% if item.ip.gateway is not defined or (item.ip.defroute is defined and not item.ip.defroute) %}
+DEFROUTE=no
+{% else %}
+GATEWAY={{ item.ip.gateway }}
+DEFROUTE=yes
+{% endif %}
+{% endif %}
+
+# IPv6
+{% if item.ipv6 is not defined or not item.ipv6 or item.master is defined %}
+IPV6INIT=no
+{% elif item.ipv6 == 'autoconf' %}
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+{% if item.defroute is defined and item.defroute %}
+IPV6_DEFROUTE=yes
+{% else %}
+IPV6_DEFROUTE=no
+{% endif %}
+{% else %}
+IPV6INIT=yes
+IPV6_AUTOCONF=no
+IPV6ADDR={{ item.ipv6.address }}
+IPV6_DEFAULTGW={{ item.ipv6.gateway | default() }}
+{% if item.defroute is defined and item.defroute %}
+IPV6_DEFROUTE=yes
+{% else %}
+IPV6_DEFROUTE=no
+{% endif %}
+{% endif %}
+
+# DNS
+{% if item.defroute is defined and item.defroute and item.master is not defined %}
+{% for dns in network.dns %}
+DNS{{ loop.index }}={{ dns }}
+{% endfor %}
+{% if network.domain is defined %}
+DOMAIN={{ network.domain }}
+{% endif %}
+PEERDNS=yes
+{% else %}
+PEERDNS=no
+{% endif %}
+
+{% if item.zone is defined %}
+# FIREWALL
+ZONE={{ item.zone }}
+{% endif %}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Multicast Relay Service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/multicast-relay/multicast-relay.py --interfaces $MDNS_INTERFACES --ifFilter /etc/multicast-relay/ifFilter.json --foreground --verbose
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

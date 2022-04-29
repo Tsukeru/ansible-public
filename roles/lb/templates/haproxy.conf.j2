@@ -1,0 +1,66 @@
+global
+	log 127.0.0.1 local0 debug
+	stats socket /var/run/haproxy.sock mode 644 level user
+
+frontend stats
+	mode http
+	bind :::8080
+	stats enable
+	stats uri /stats
+	stats refresh 10s
+	stats admin if TRUE
+
+frontend http-in
+	mode http
+	bind :::80
+
+{% for service in haproxy.services if (service.protocol is defined and service.protocol == 'http') %}
+	acl host_{{ service.name }} hdr(host) {% if service.match_subdomains is defined and service.match_subdomains %}-m end{% else %}-i{% endif %} {{ service.domains | join(' ') }}
+	use_backend {{ service.name }} if host_{{ service.name }}
+{% endfor %}
+
+	default_backend redirect-https
+
+frontend https-in
+	mode tcp
+	bind :::443 alpn h2,http/1.1
+
+{% for service in haproxy.services if (service.protocol is not defined or service.protocol == 'https') %}
+{% if service.domains is defined %}
+{% if service.default is not defined or not service.default %}
+	acl host_{{ service.name }} req.ssl_sni {% if service.match_subdomains is defined and service.match_subdomains %}-m end{% else %}-i{% endif %} {{ service.domains | join(' ') }}
+	use_backend {{ service.name }} if host_{{ service.name }}
+
+{% else %}
+	default_backend {{ service.name }}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+	tcp-request inspect-delay 5s
+	tcp-request content accept if { req.ssl_hello_type 1 }
+	tcp-request content reject
+
+{% for service in haproxy.services %}
+{% if service.port is defined %}
+frontend {{ service.name }}-tcp
+        mode tcp
+        bind :::{{ service.port }}
+	use_backend {{ service.name }}
+
+{% endif %}
+backend {{ service.name }}
+{% if service.protocol is defined and service.protocol == 'http' %}
+	mode http
+{% else %}
+	mode tcp
+{% endif %}
+{% for server in service.backends %}
+	server {{ server }}{{ ' check' if service.disable_check is not defined or not service.disable_check }} {% if service.backend_options is defined %}{{ service.backend_options }}{% endif %}
+
+{% endfor %}
+{% endfor %}
+
+backend redirect-https
+	mode http
+	http-request redirect scheme https code 301

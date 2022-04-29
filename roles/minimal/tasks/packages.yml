@@ -1,0 +1,29 @@
+- name: install base packages
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - vim
+    - net-tools
+    - wget
+    - htop
+    - traceroute
+    - mtr
+    - ncat
+    - dnsutils
+    - curl
+    - gpg
+
+- name: set default release apt repository
+  copy:
+    dest: /etc/apt/apt.conf.d/01default-release
+    content: 'APT::Default-Release "stable";'
+  when: debian.repositories.testing
+
+- name: add testing repositories
+  apt_repository:
+    repo: "{{ item }} http://deb.debian.org/debian testing main"
+    state: present
+    update_cache: true
+  loop: [ 'deb', 'deb-src' ]
+  when: debian.repositories.testing

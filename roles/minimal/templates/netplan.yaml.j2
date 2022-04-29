@@ -1,0 +1,66 @@
+network:
+  version: 2
+
+{% if not '.' in item.name %}
+  ethernets:
+    {{ item.name }}:
+{% else %}
+  vlans:
+    {{ item.name }}:
+      id: {{ item.name.split('.')[1] }}
+      link: {{ item.name.split('.')[0] }}
+{% endif %}
+{% if item.mtu is defined %}
+      mtu: {{ item.mtu }}
+{% endif %}
+{% if item.ip == 'dhcp' %}
+      dhcp4: true
+{% else %}
+      dhcp4: false
+{% endif %}
+{% if item.ipv6 == 'autoconf' %}
+      dhcp6: false
+      accept-ra: true
+{% else %}
+      dhcp6: false
+      accept-ra: false
+{% endif %}
+{% if (item.ipv6 is not defined or not item.ipv6) and item.ipv6.address is not defined %}
+{% if item.ip is defined and item.ip == 'link-local' %}
+      link-local: [ ipv4 ]
+{% else %}
+      link-local: []
+{% endif %}
+{% else %}
+{% if item.ip is defined and item.ip == 'link-local' %}
+      link-local: [ ipv4, ipv6 ]
+{% else %}
+      link-local: [ ipv6 ]
+{% endif %}
+{% endif %}
+{% if item.ip.address is defined or item.ipv6.address is defined %}
+      addresses:
+{% endif %}
+{% if item.ip.address is defined %}
+        - {{ item.ip.address }}
+{% endif %}
+{% if item.ipv6.address is defined %}
+        - {{ item.ipv6.address }}
+{% endif %}
+{% if item.defroute is defined and item.defroute %}
+{% if item.ip.gateway is defined %}
+      gateway4: {{ item.ip.gateway }}
+{% endif %}
+{% if item.ipv6.gateway is defined %}
+      gateway6: {{ item.ipv6.gateway }}
+{% endif %}
+      nameservers:
+        addresses:
+{% for dns in network.dns %}
+          - {{ dns }}
+{% endfor %}
+{% if network.domain is defined %}
+        search:
+          - {{ network.domain }}
+{% endif %}
+{% endif %}

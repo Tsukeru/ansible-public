@@ -1,0 +1,13 @@
+- name: stop plex
+  service:
+    name: plexmediaserver
+    state: stopped
+
+- name: restart plex
+  service:
+    name: plexmediaserver
+    state: restarted
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

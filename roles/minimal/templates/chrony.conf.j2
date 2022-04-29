@@ -1,0 +1,18 @@
+{% if network.ntp.pools is defined %}
+{% for pool in network.ntp.pools %}
+pool {{ pool }} iburst
+{% endfor %}
+{% else %}
+{% for ntp in network.ntp.servers %}
+server {{ ntp }} iburst
+{% endfor %}
+{% endif %}
+
+{% if ntp.allow is defined %}
+allow {{ ntp.allow }}
+{% endif %}
+
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony

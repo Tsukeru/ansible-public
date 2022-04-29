@@ -1,0 +1,13 @@
+[Unit]
+Description=fs2es-indexer
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/fs2es-indexer/fs2es-indexer daemon
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

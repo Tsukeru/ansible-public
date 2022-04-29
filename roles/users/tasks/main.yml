@@ -1,0 +1,7 @@
+- name: "Configure Linux users"
+  include: "linux.yml"
+  when: ansible_os_family == "RedHat" or ansible_os_family == "Debian" or ansible_os_family == "Alpine" or ansible_os_family == "Archlinux"
+
+- name: "Configure BSD/Solaris users"
+  include: "bsd.yml"
+  when: ansible_os_family == "FreeBSD" or ansible_os_family == "Solaris"

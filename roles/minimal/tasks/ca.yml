@@ -1,0 +1,42 @@
+- name: update ca packages
+  package:
+    name: ca-certificates
+    state: latest
+  tags: [ 'ca' ]
+
+- name: install certificate authorities (redhat)
+  copy:
+    src: "{{ item }}"
+    dest: /etc/pki/ca-trust/source/anchors
+  with_fileglob:
+    - files/ca/*
+  notify: update trusted ca
+  tags: [ 'ca' ]
+  when: ansible_os_family == 'RedHat'
+
+- name: install certificate authorities (arch)
+  copy:
+    src: "{{ item }}"
+    dest: /etc/ca-certificates/trust-source/anchors
+  with_fileglob:
+    - files/ca/*
+  notify: update trusted ca
+  tags: [ 'ca' ]
+  when: ansible_os_family == "Archlinux"
+
+- name: create base directory (debian)
+  file:
+    name: /usr/local/share/ca-certificates/extra/
+    state: directory
+  tags: [ 'ca' ]
+  when: ansible_os_family == 'Debian'
+
+- name: install certificate authorities (debian)
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/share/ca-certificates/extra/{{ item | basename | replace('.pem', '.crt') }}
+  with_fileglob:
+    - files/ca/*
+  notify: update trusted ca
+  tags: [ 'ca' ]
+  when: ansible_os_family == 'Debian'

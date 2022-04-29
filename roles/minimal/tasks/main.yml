@@ -1,0 +1,40 @@
+- name: gather packages informations
+  package_facts:
+    manager: auto
+
+- name: cloud-init
+  include: cloudinit.yml
+  when: "'cloud-init' in ansible_facts.packages"
+
+- name: network
+  include: network.yml
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: hostname
+  include: hostname.yml
+
+- name: setup time
+  include: time.yml
+  when: ansible_os_family == 'Debian'
+
+- name: install base packages
+  include: packages.yml
+
+- name: selinux
+  include: selinux.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: install ca
+  include: ca.yml
+  tags: [ 'ca' ]
+
+- name: ssh
+  include: ssh.yml
+
+- name: conf
+  include: conf.yml
+
+- name: grub
+  include: grub.yml

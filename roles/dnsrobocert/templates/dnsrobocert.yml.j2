@@ -1,0 +1,20 @@
+draft: false
+
+acme:
+  email_account: {{ dnsrobocert.email }}
+  staging: false
+
+profiles:
+  - name: powerdns
+    provider: powerdns
+    provider_options:
+      auth_token: {{ dnsrobocert.powerdns.token }}
+      pdns_server: {{ dnsrobocert.powerdns.url }}
+
+certificates:
+{% for cert in dnsrobocert.certs %}
+  - domains: [ {% for domain in cert.domains %}'{{ domain }}'{% endfor %} ]
+    profile: powerdns
+    pfx:
+      export: true
+{% endfor %}

@@ -1,0 +1,6 @@
+- name: grub boot parameters
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="init=/lib/systemd/systemd"'
+  notify: rebuild grub conf

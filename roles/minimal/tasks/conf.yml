@@ -1,0 +1,17 @@
+- name: disable vim mouse support
+  lineinfile:
+    path: /etc/vim/vimrc
+    line: "set {{ item }}="
+  loop: [ 'mouse', 'ttymouse' ]
+
+- name: setup bash history
+  lineinfile:
+    path: /etc/profile
+    line: export HISTTIMEFORMAT='%F %T '
+
+- name: improved bash prompt for root
+  copy:
+    src: /etc/skel/.bashrc
+    dest: /root/.bashrc
+    force: yes
+    remote_src: yes

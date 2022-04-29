@@ -1,0 +1,66 @@
+- name: install pip3
+  package:
+    name: python3-pip
+    state: present
+
+- name: install certbot
+  package:
+    name: certbot
+    state: present
+
+- name: install certbot-dns-powerdns
+  pip:
+    name: certbot-dns-powerdns
+
+- name: create configuration directory
+  file:
+    path: /etc/ssl/acme/
+    state: directory
+
+- name: create acme webroot
+  file:
+    path: /var/www/acme
+    state: directory
+  when: "'nginx' in group_names"
+
+- name: create configuration file for pdns
+  template:
+    src: pdns-credentials.ini.j2
+    dest: /etc/ssl/acme/pdns-credentials.ini
+    mode: '0700'
+  when: acme.powerdns is defined and acme.powerdns
+
+- name: install certbot service
+  template:
+    src: certbot.service.j2
+    dest: /etc/systemd/system/certbot@.service
+  notify: reload systemd
+
+- name: install certbot timer
+  copy:
+    src: certbot.timer
+    dest: /etc/systemd/system/certbot@.timer
+  notify: reload systemd
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: generate certificates
+  systemd:
+    name: "certbot@{{ item | replace('-', '\\x2d') }}.service"
+    state: started
+    enabled: yes
+  loop: "{{ acme.domains }}"
+
+- name: enable renewal of certificates
+  systemd:
+    name: "certbot@{{ item | replace('-', '\\x2d') }}.timer"
+    state: started
+    enabled: yes
+  loop: "{{ acme.domains }}"
+
+- name: set read permission on pkcs12
+  file:
+    path: "/etc/ssl/acme/{{ item }}.pfx"
+    mode: '0644'
+  loop: "{{ acme.domains }}"

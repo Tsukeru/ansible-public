@@ -1,0 +1,4 @@
+- name: restart dnsrobocert
+  docker_container:
+    name: certs
+    restart: yes

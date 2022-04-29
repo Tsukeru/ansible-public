@@ -1,0 +1,4 @@
+- name: restart jackett
+  service:
+    name: jackett
+    state: restarted

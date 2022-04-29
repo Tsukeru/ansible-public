@@ -1,0 +1,33 @@
+- name: install keepalived
+  package:
+    name: keepalived
+    state: latest
+
+- name: keepalived configuration
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  notify: restart keepalived
+
+- name: start keepalived
+  service:
+    name: keepalived
+    enabled: yes
+    state: started
+
+- name: install haproxy
+  package:
+    name: haproxy
+    state: latest
+
+- name: haproxy configuration
+  template:
+    src: haproxy.conf.j2
+    dest: /etc/haproxy/haproxy.cfg
+  notify: restart haproxy
+
+- name: start haproxy
+  service:
+    name: haproxy
+    enabled: yes
+    state: started

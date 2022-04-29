@@ -1,0 +1,117 @@
+- name: setup powerdns repo
+  apt_repository:
+    filename: powerdns_auth
+    repo: "deb [arch=amd64] http://repo.powerdns.com/debian {{ ansible_distribution_release }}-auth-{{ powerdns.versions.authoritative | replace('.', '') }} main"
+    state: present
+
+- name: install powerdns
+  package:
+    name: 
+      - pdns-server
+      - pdns-backend-mysql
+    state: latest
+
+- name: setup pdns user
+  mysql_user:
+    name: powerdns
+    password: powerdns
+    priv: 'powerdns.*:ALL'
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: check that database exists
+  mysql_db:
+    name: powerdns
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+  check_mode: yes
+  notify: import powerdns schema
+
+- name: flush handlers
+  meta: flush_handlers
+
+- name: set pdns ip/port (recursor)
+  lineinfile:
+    path: /etc/powerdns/pdns.conf
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+    owner: pdns
+    group: pdns
+    mode: "0755"
+  loop:
+    - ['local-address', '127.0.0.1 ::1']
+    - ['local-port', '5300']
+  when: powerdns.recursor
+
+- name: set pdns ip/port (standalone)
+  lineinfile:
+    path: /etc/powerdns/pdns.conf
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+    owner: pdns
+    group: pdns
+    mode: "0755"
+  loop:
+    - ['local-address', '{{ ansible_default_ipv4.address }} {{ ansible_default_ipv6.address | default() }}']
+    - ['local-port', '53']
+  when: not powerdns.recursor
+
+- name: set configuration for pdns
+  lineinfile:
+    path: /etc/powerdns/pdns.conf
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+    owner: pdns
+    group: pdns
+    mode: "0755"
+  loop:
+    - ['launch', 'gmysql']
+    - ['gmysql-socket', '/run/mysqld/mysqld.sock']
+    - ['gmysql-user', 'powerdns']
+    - ['gmysql-password', 'powerdns']
+    - ['gmysql-dbname', 'powerdns']
+    - ['gmysql-dnssec', 'yes']
+    - ['webserver', 'yes']
+    - ['webserver-port', '8081']
+    - ['api', 'yes']
+    - ['api-key', "{{ powerdns.api_key }}"]
+    - ['edns-subnet-processing', 'yes']
+  notify: restart pdns
+
+- name: set master configuration
+  lineinfile:
+    path: /etc/powerdns/pdns.conf
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+    owner: pdns
+    group: pdns
+    mode: "0755"
+  loop:
+    - ['default-soa-content', "{{ ansible_host }} {{ powerdns.email | replace('@', '.') }} 0 10800 3600 604800 60"]
+    - ['primary', 'yes']
+    - ['allow-axfr-ips', "{{ (['127.0.0.0/8', '::1'] + powerdns.slaves | default([])) | join(',') }}"]
+  when: powerdns.master is defined and powerdns.master
+  notify: restart pdns
+
+- name: set slave configuration
+  lineinfile:
+    path: /etc/powerdns/pdns.conf
+    regexp: "^{{ item[0] }}="
+    line: "{{ item[0] }}={{ item[1] }}"
+    owner: pdns
+    group: pdns
+    mode: "0755"
+  loop:
+    - ['secondary', 'yes'] 
+    - ['autosecondary', 'yes']
+    - ['trusted-notification-proxy', '[::1]']
+  when: powerdns.master is not defined or not powerdns.master
+  notify: restart pdns
+
+- name: start pdns
+  service:
+    name: pdns
+    state: started
+    enabled: yes
+
+- name: flush handlers
+  meta: flush_handlers

@@ -1,0 +1,50 @@
+- name: install yubikey-manager
+  package:
+    name: yubikey-manager
+    state: present
+
+- name: install step-ca with yubikey support
+  copy:
+    src: "step-ca-yubikey-{{ step_ca.cli_version }}"
+    dest: /usr/bin/step-ca
+    mode: "0755"
+  when: step_ca.yubikey
+
+- name: setup system service override
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - /etc/systemd/system/step-ca.service.d
+    - /etc/systemd/system/dev-yubikey.device.wants
+
+- name: setup yubikey udev rules
+  copy:
+    dest: /etc/udev/rules.d/75-yubikey.rules
+    content: |
+      ACTION=="add", SUBSYSTEM=="usb", ENV{PRODUCT}=="1050/404/*", TAG+="systemd", SYMLINK+="yubikey"
+      ACTION=="remove", SUBSYSTEM=="usb", ENV{PRODUCT}=="1050/404/*", TAG+="systemd"
+  notify: reload udev rules
+
+- name: symlink step-ca service to yubikey wanted
+  file:
+    src: /etc/systemd/system/step-ca.service
+    path: /etc/systemd/system/dev-yubikey.device.wants/step-ca.service
+    force: yes
+    state: link
+  notify:
+    - reload systemd
+    - restart step-ca 
+  when: step_ca.yubikey
+
+- name: setup auto yubikey for step-ca service
+  copy:
+    dest: /etc/systemd/system/step-ca.service.d/10-yubikey.conf
+    content: |
+      [Unit]
+      BindsTo=dev-yubikey.device
+      After=dev-yubikey.device
+  notify:
+    - reload systemd
+    - restart step-ca 
+  when: step_ca.yubikey

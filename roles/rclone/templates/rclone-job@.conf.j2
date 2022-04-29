@@ -1,0 +1,31 @@
+{% if ':' in item.dest or ':' in item.source %}
+{% if ':' in item.dest %}
+{% set remote = item.dest | split(':') | first %}
+{% else %}
+{% set remote = item.source | split(':') | first %}
+{% endif %}
+{% set remote = rclone.remotes | selectattr('name', 'equalto', remote) | first %}
+{% if remote.type == 'crypt' %}
+{% set remote_backend = remote.remote | split(':') | first %}
+{% set remote = rclone.remotes | selectattr('name', 'equalto', remote_backend ) | first %}
+{% endif %}
+{% endif %}
+[Service]
+Environment=RCLONE_ACTION={{ item.type }}
+{% if item.source is defined %}
+Environment="RCLONE_SOURCE='{{ item.source }}'"
+{% endif %}
+Environment="RCLONE_DEST='{{ item.dest }}'"
+Environment="ADDITIONAL_OPT=
+{%- if item.file_types is defined -%}
+--include '*.{{ "{" }}{{ item.file_types | join(',') }}{{ "}" }}' {% endif -%}
+{%- if item.min_age is defined -%}
+--min-age {{ item.min_age }} {% endif -%}
+{%- if item.max_transfer is defined -%}
+--max-transfer {{ item.max_transfer }} {% endif -%}
+{%- if item.exclude is defined -%}
+--exclude '{{ item.exclude | join('\' --exclude \'') }}' {% endif -%}
+{%- if rclone.common.exclude | length > 0 and (item.inherit_exclude is not defined or item.inherit_exclude) -%}
+--exclude '{{ rclone.common.exclude | join('\' --exclude \'') }}' {% endif -%}
+{%- if item.backup_dir is defined -%}
+--backup-dir {{ item.backup_dir }}{% endif -%}"

@@ -1,0 +1,25 @@
+{% for mount in rclone.remotes %}
+[{{ mount.name }}]
+type = {{ mount.type }}
+{% if mount.type == 'drive' %}
+scope = drive
+service_account_file = /etc/rclone/keys/{{ mount.name }}.json
+team_drive = {{ mount.team_drive }}
+stop_on_download_limit = true
+stop_on_upload_limit = true
+{% if mount.root_folder is defined %}
+root_folder_id = {{ mount.root_folder }}
+{% endif %}
+{% elif mount.type == 's3' %}
+provider = Other
+access_key_id = {{ mount.access_key }}
+secret_access_key = {{ mount.secret_key }}
+endpoint = {{ mount.endpoint }}
+acl = private
+{% elif mount.type == 'crypt' %}
+remote = {{ mount.remote }}
+password = {{ mount.key }}
+password2 = {{ mount.key_salt }}
+{% endif %}
+
+{% endfor %}

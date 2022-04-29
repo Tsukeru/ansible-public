@@ -1,0 +1,60 @@
+- name: install ruby
+  package:
+    name: ruby
+    state: present
+
+- name: install dependencies
+  package:
+    name:
+      - make
+      - pkg-config
+      - cmake 
+      - libssl-dev
+      - libsqlite3-dev
+      - libssh2-1-dev
+      - zlib1g-dev
+      - ruby-dev
+      - libicu-dev
+      - g++
+    state: present
+
+- name: install oxidized
+  community.general.gem:
+    name: "{{ item }}"
+    user_install: no
+    state: present
+  loop: ['oxidized', 'oxidized-web']
+
+- name: setup oxidized user
+  user:
+    name: oxidized
+    system: yes
+    shell: /bin/false
+
+- name: setup oxidized configuration folder
+  file:
+    path: /etc/oxidized
+    state: directory
+    owner: oxidized
+    group: oxidized
+
+- name: setup router.db file
+  file:
+    path: /etc/oxidized/router.db
+    state: touch
+    owner: oxidized
+    group: oxidized
+
+- name: setup oxidized service
+  template:
+    src: oxidized.service.j2
+    dest: /etc/systemd/system/oxidized.service
+  notify: 
+    - reload systemd
+    - restart oxidized
+
+- name: start oxidized
+  service:
+    name: oxidized
+    state: started
+    enabled: yes

@@ -1,0 +1,7 @@
+[Unit]
+Description=Scrub ZFS tank pool
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/bin/zpool scrub -s %i
+ExecStart=/usr/bin/zpool scrub %i

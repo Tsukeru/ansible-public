@@ -1,0 +1,5 @@
+{
+{% for subnet in mdns.relay.blacklist %}
+	"{{ subnet }}": []{{ "," if not loop.last }}
+{% endfor %}
+}
